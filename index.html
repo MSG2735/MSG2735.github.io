@@ -6,22 +6,69 @@
 	<link rel="icon" href="https://i.imgur.com/IWqMBMH.png" type="image/png">
     <style>
 		body {
-			margin: 0;
-			min-height: 100vh;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			flex-direction: column;
-			background: linear-gradient(135deg, #1a1a1a, #4a4a4a);
-			font-family: Arial, sans-serif;
-		}
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: linear-gradient(135deg, #1a1a1a, #4a4a4a);
+            font-family: Arial, sans-serif;
+        }
+		
+		/* Add color selection styles */
+        .color-selection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
 
-		.game-container {
-			background: rgba(255, 255, 255, 0.1);
-			padding: 2rem;
-			border-radius: 15px;
-			box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
-		}
+        .color-selection.hidden {
+            display: none;
+        }
+
+        .color-selection h2 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .color-selection button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .color-selection button:hover {
+            background: #219a52;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(39, 174, 96, 0.5);
+        }
+
+        .game-container {
+            display: none; /* Hidden initially */
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+        }
 
 		.status {
 			background: rgba(0, 0, 0, 0.7);
@@ -157,6 +204,12 @@
     </style>
 </head>
 <body>
+    <div class="color-selection" id="colorSelection">
+        <h2>Choose Your Color</h2>
+        <button onclick="startGame('white')">White</button>
+        <button onclick="startGame('black')">Black</button>
+    </div>
+
     <div class="game-container">
         <div class="status" id="status">White's Turn</div>
         <div class="board" id="board"></div>
@@ -430,13 +483,14 @@
         }
 
         class Game {
-            constructor() {
-                this.board = new Board();
-                this.aiColor = 'black';
-                this.moveHistory = [];
-                this.setupBoard();
-                this.updateStatus();
-            }
+			constructor(userColor) {
+				this.userColor = userColor;
+				this.aiColor = userColor === 'white' ? 'black' : 'white';
+				this.board = new Board();
+				this.moveHistory = [];
+				this.setupBoard();
+				this.updateStatus();
+			}
 
             setupBoard() {
                 const boardElement = document.getElementById('board');
@@ -493,10 +547,8 @@
             }
 
             handleSquareClick(event) {
-				if (this.board.gameOver || 
-				   (this.board.currentTurn === this.aiColor && !this.board.selectedPiece)) return;
+				if (this.board.gameOver || this.board.currentTurn !== this.userColor) return;
 
-				// Get the actual square element even when clicking on the possible-move dot
 				const squareElement = event.target.closest('.square');
 				if (!squareElement) return;
 
@@ -754,15 +806,27 @@
             }
 
             reset() {
-                this.board = new Board();
-                this.moveHistory = [];
-                this.setupBoard();
-                this.updateStatus();
-                document.getElementById('moveHistory').innerHTML = '';
-            }
+				this.board = new Board();
+				this.moveHistory = [];
+				this.setupBoard();
+				this.updateStatus();
+				document.getElementById('moveHistory').innerHTML = '';
+				if (this.userColor === 'black') {
+					this.aiMove();
+				}
+			}
         }
+		
+		let game;
 
-        const game = new Game();
+		function startGame(userColor) {
+			document.getElementById('colorSelection').classList.add('hidden');
+			document.querySelector('.game-container').style.display = 'block';
+			game = new Game(userColor);
+			if (userColor === 'black') {
+				game.aiMove();
+			}
+		}
     </script>
 </body>
 </html>
