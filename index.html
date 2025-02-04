@@ -2,415 +2,637 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-	<link rel="icon" href="https://i.imgur.com/agWNbVt.png" type="image/png">
-    <title>Blackjack Game</title>
+    <title>Chess Game with AI</title>
     <style>
-        body {
+		body {
+			margin: 0;
+			min-height: 100vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+			background: linear-gradient(135deg, #1a1a1a, #4a4a4a);
+			font-family: Arial, sans-serif;
+		}
+
+		.game-container {
+			background: rgba(255, 255, 255, 0.1);
+			padding: 2rem;
+			border-radius: 15px;
+			box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+		}
+
+		.status {
+			background: rgba(0, 0, 0, 0.7);
+			color: #fff;
+			padding: 15px 30px;
+			border-radius: 8px;
+			margin-bottom: 20px;
+			text-align: center;
+			font-size: 24px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+		}
+
+		.board {
+			border-radius: 8px;
+			overflow: hidden;
+			box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+		}
+
+		.controls {
+			margin-top: 20px;
+			text-align: center;
+		}
+
+		button {
+			background: #27ae60;
+			color: white;
+			border: none;
+			padding: 12px 25px;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 16px;
+			transition: all 0.3s ease;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		button:hover {
+			background: #219a52;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		}
+        .board {
+            width: 560px;
+            height: 560px;
+            border: 2px solid #333;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+        }
+
+        .square {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 50px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .white {
+            background-color: #f0d9b5;
+        }
+
+        .black {
+            background-color: #b58863;
+        }
+
+        .selected {
+            background-color: #7a9c5f !important;
+        }
+
+        .possible-move {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #7a9c5f80;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .status {
+            margin: 20px 0;
+            font-size: 24px;
             font-family: Arial, sans-serif;
-            background-color: #2c5f2d;
-            color: white;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .hand {
-            border: 2px solid #ffd700;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
-            min-height: 120px;
-        }
-        .card {
-            display: inline-block;
-            background: white;
-            color: black;
-            width: 60px;
-            height: 80px;
-            margin: 5px;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            text-align: center;
-            line-height: 80px;
-            font-size: 1.2em;
-        }
-        .hole-card {
-            background: repeating-linear-gradient(
-                45deg,
-                #ff0000,
-                #ff0000 10px,
-                #ffffff 10px,
-                #ffffff 20px
-            );
-        }
+
         .controls {
             margin: 20px 0;
         }
+
         button {
             padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
+            font-size: 16px;
             cursor: pointer;
-            background-color: #ffd700;
-            font-weight: bold;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .betting {
-            margin: 20px 0;
-        }
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: rgba(0,0,0,0.3);
-            border-radius: 5px;
-        }
-        .new-game {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .hidden {
-            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Blackjack</h1>
-        <div class="balance">Balance: $<span id="balance">1000</span></div>
-        
-        <div class="betting" id="bettingSection">
-            <input type="number" id="betAmount" min="10" max="1000" value="100">
-            <button onclick="placeBet()">Place Bet</button>
-        </div>
-
-        <div class="game" id="gameSection" style="display: none;">
-            <div class="dealer-hand hand">
-                <h2>Dealer's Hand (<span id="dealerTotal">0</span>)</h2>
-                <div id="dealerCards"></div>
-            </div>
-
-            <div class="player-hands">
-                <!-- Player hands will be generated dynamically -->
-            </div>
-
-            <div class="controls" id="gameControls">
-                <button onclick="playerHit()" id="hitButton">Hit</button>
-                <button onclick="playerStand()" id="standButton">Stand</button>
-                <button onclick="splitHand()" id="splitButton" disabled>Split</button>
-            </div>
-
-            <div class="status" id="gameStatus"></div>
-        </div>
-
-        <div class="new-game hidden" id="newGameSection">
-            <button onclick="prepareNewGame()">New Game</button>
+    <div class="game-container">
+        <div class="status" id="status">White's Turn</div>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <button onclick="game.reset()">New Game</button>
         </div>
     </div>
 
     <script>
-        let gameState = {
-            deck: [],
-            playerHands: [],
-            currentHand: 0,
-            dealerHand: [],
-            balance: 1000,
-            currentBet: 0,
-            numDecks: 6,
-            canSplit: true,
-            gameActive: false,
-            dealerHitsSoft17: true
-        };
-
-        function createDeck() {
-            const suits = ['♠', '♣', '♥', '♦'];
-            const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-            let deck = [];
-            for (let i = 0; i < gameState.numDecks; i++) {
-                for (let suit of suits) {
-                    for (let value of values) {
-                        deck.push({ value: value, suit: suit });
-                    }
-                }
+        class Piece {
+            constructor(type, color, position) {
+                this.type = type;
+                this.color = color;
+                this.position = position;
+                this.hasMoved = false;
             }
-            return deck;
-        }
 
-        function shuffleDeck() {
-            for (let i = gameState.deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [gameState.deck[i], gameState.deck[j]] = [gameState.deck[j], gameState.deck[i]];
-            }
-        }
-
-        function dealCard(hand, faceUp = true) {
-            if (gameState.deck.length < 20) {
-                gameState.deck = createDeck();
-                shuffleDeck();
-            }
-            const card = gameState.deck.pop();
-            hand.push({ ...card, faceUp: faceUp });
-            return card;
-        }
-
-        function calculateHandValue(hand) {
-            let value = 0;
-            let aces = 0;
-            for (let card of hand) {
-                if (!card.faceUp) continue;
-                if (card.value === 'A') {
-                    aces++;
-                    value += 11;
-                } else if (['J','Q','K'].includes(card.value)) {
-                    value += 10;
-                } else {
-                    value += parseInt(card.value);
-                }
-            }
-            while (value > 21 && aces > 0) {
-                value -= 10;
-                aces--;
-            }
-            return value;
-        }
-
-        function isBlackjack(hand) {
-            return hand.length === 2 && calculateHandValue(hand) === 21;
-        }
-
-        function dealerShouldHit() {
-            const value = calculateHandValue(gameState.dealerHand);
-            const soft17 = gameState.dealerHand.some(c => c.value === 'A' && c.faceUp) && value === 17;
-            return value < 17 || (soft17 && gameState.dealerHitsSoft17);
-        }
-
-        function playerHit() {
-            const currentHand = gameState.playerHands[gameState.currentHand];
-            dealCard(currentHand.cards);
-            const handValue = calculateHandValue(currentHand.cards);
-            updateDisplay();
-            if (handValue > 21) {
-                currentHand.status = 'bust';
-                gameState.currentHand++;
-                if (gameState.currentHand >= gameState.playerHands.length) {
-                    dealerTurn();
-                }
-            }
-        }
-
-        function playerStand() {
-            gameState.playerHands[gameState.currentHand].status = 'stand';
-            gameState.currentHand++;
-            if (gameState.currentHand >= gameState.playerHands.length) {
-                dealerTurn();
-            }
-            updateDisplay();
-        }
-
-        function splitHand() {
-            if (!gameState.canSplit) return;
-            const currentHand = gameState.playerHands[gameState.currentHand];
-            // Ensure the hand is eligible for splitting:
-            if (currentHand.cards.length === 2 && currentHand.cards[0].value === currentHand.cards[1].value && gameState.playerHands.length < 2) {
-                const cardToSplit = currentHand.cards.pop();
-                const newHand = {
-                    cards: [cardToSplit],
-                    bet: currentHand.bet,
-                    status: 'active'
+            get symbol() {
+                const symbols = {
+                    king: '♔',
+                    queen: '♕',
+                    rook: '♖',
+                    bishop: '♗',
+                    knight: '♘',
+                    pawn: '♙'
                 };
-                // Deal one new card to each hand:
-                dealCard(currentHand.cards);
-                dealCard(newHand.cards);
-                gameState.playerHands.push(newHand);
-                gameState.canSplit = false;
-                updateDisplay();
+                return String.fromCodePoint(symbols[this.type].codePointAt(0) + (this.color === 'black' ? 6 : 0));
             }
         }
 
-        function dealerTurn() {
-            revealDealerCards();
-            while (dealerShouldHit()) {
-                dealCard(gameState.dealerHand);
+        class Board {
+            constructor() {
+                this.squares = Array(8).fill().map(() => Array(8).fill(null));
+                this.initBoard();
+                this.currentTurn = 'white';
+                this.selectedPiece = null;
+                this.possibleMoves = [];
+                this.gameOver = false;
             }
-            concludeGame();
-        }
 
-        function concludeGame() {
-            const dealerValue = calculateHandValue(gameState.dealerHand);
-            const dealerBust = dealerValue > 21;
-            gameState.playerHands.forEach(hand => {
-                const playerValue = calculateHandValue(hand.cards);
-                if (hand.status === 'bust') {
-                    hand.result = 'lost';
-                } else if (dealerBust) {
-                    hand.result = 'won';
-                } else {
-                    if (playerValue > dealerValue) {
-                        hand.result = 'won';
-                    } else if (playerValue === dealerValue) {
-                        hand.result = 'push';
-                    } else {
-                        hand.result = 'lost';
-                    }
+            initBoard() {
+                // Initialize pawns
+                for (let i = 0; i < 8; i++) {
+                    this.squares[1][i] = new Piece('pawn', 'black', [1, i]);
+                    this.squares[6][i] = new Piece('pawn', 'white', [6, i]);
                 }
-                if (isBlackjack(hand.cards)) {
-                    if (isBlackjack(gameState.dealerHand)) {
-                        hand.result = 'push';
-                    } else {
-                        hand.result = 'blackjack';
-                    }
-                }
-            });
-            updateBalance();
-            gameState.gameActive = false;
-            updateDisplay();
-            showResults();
-            // Reveal the New Game button (which remains on the same screen)
-            document.getElementById('newGameSection').classList.remove('hidden');
-        }
 
-        function updateDisplay() {
-            // Update dealer's hand display
-            const dealerCardsDiv = document.getElementById('dealerCards');
-            dealerCardsDiv.innerHTML = '';
-            gameState.dealerHand.forEach(card => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = 'card' + (card.faceUp ? '' : ' hole-card');
-                cardDiv.textContent = card.faceUp ? `${card.value}${card.suit}` : '';
-                dealerCardsDiv.appendChild(cardDiv);
-            });
-            document.getElementById('dealerTotal').textContent =
-                gameState.dealerHand.every(c => c.faceUp) ? calculateHandValue(gameState.dealerHand) : '?';
-
-            // Update player's hand display
-            const playerHandsDiv = document.querySelector('.player-hands');
-            playerHandsDiv.innerHTML = '';
-            gameState.playerHands.forEach((hand, index) => {
-                const handDiv = document.createElement('div');
-                handDiv.className = 'player-hand hand';
-                handDiv.innerHTML = `<h2>Your Hand ${gameState.playerHands.length > 1 ? (index + 1) : ''} 
-                    (<span class="playerTotal">${calculateHandValue(hand.cards)}</span>)</h2>
-                    <div class="cards"></div>`;
-                hand.cards.forEach(card => {
-                    const cardDiv = document.createElement('div');
-                    cardDiv.className = 'card';
-                    cardDiv.textContent = `${card.value}${card.suit}`;
-                    handDiv.querySelector('.cards').appendChild(cardDiv);
+                // Initialize other pieces
+                const pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+                pieces.forEach((piece, i) => {
+                    this.squares[0][i] = new Piece(piece, 'black', [0, i]);
+                    this.squares[7][i] = new Piece(piece, 'white', [7, i]);
                 });
-                playerHandsDiv.appendChild(handDiv);
-            });
+            }
 
-            // Enable or disable controls based on the current state:
-            const currentHand = gameState.playerHands[gameState.currentHand];
-            const canSplit = gameState.canSplit && currentHand && currentHand.cards.length === 2 &&
-                             currentHand.cards[0].value === currentHand.cards[1].value && gameState.playerHands.length < 2;
-            document.getElementById('splitButton').disabled = !canSplit || !gameState.gameActive;
-            document.getElementById('hitButton').disabled = !gameState.gameActive || (currentHand && currentHand.status !== 'active');
-            document.getElementById('standButton').disabled = !gameState.gameActive || (currentHand && currentHand.status !== 'active');
-        }
+            getKingPosition(color) {
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.squares[row][col];
+                        if (piece && piece.type === 'king' && piece.color === color) {
+                            return [row, col];
+                        }
+                    }
+                }
+                return null;
+            }
 
-        function revealDealerCards() {
-            gameState.dealerHand.forEach(card => card.faceUp = true);
-        }
+            isCheck(color) {
+                const kingPos = this.getKingPosition(color);
+                return this.isSquareAttacked(kingPos, color);
+            }
 
-        function updateBalance() {
-            gameState.playerHands.forEach(hand => {
-                switch(hand.result) {
-                    case 'won':
-                        gameState.balance += hand.bet;
+            isCheckmate(color) {
+                if (!this.isCheck(color)) return false;
+                return this.getAllValidMoves(color).length === 0;
+            }
+
+            isStalemate(color) {
+                if (this.isCheck(color)) return false;
+                return this.getAllValidMoves(color).length === 0;
+            }
+
+            isSquareAttacked(position, defenderColor) {
+                const attackerColor = defenderColor === 'white' ? 'black' : 'white';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.squares[row][col];
+                        if (piece && piece.color === attackerColor) {
+                            const moves = this.getPossibleMoves(piece, false);
+                            if (moves.some(([r, c]) => r === position[0] && c === position[1])) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            getAllValidMoves(color) {
+                const moves = [];
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.squares[row][col];
+                        if (piece && piece.color === color) {
+                            const validMoves = this.getValidMoves(piece);
+                            validMoves.forEach(move => {
+                                moves.push({
+                                    from: [row, col],
+                                    to: move
+                                });
+                            });
+                        }
+                    }
+                }
+                return moves;
+            }
+
+            getValidMoves(piece) {
+                const possibleMoves = this.getPossibleMoves(piece);
+                return possibleMoves.filter(move => {
+                    const copyBoard = this.clone();
+                    copyBoard.movePiece(piece.position, move);
+                    return !copyBoard.isCheck(piece.color);
+                });
+            }
+
+            getPossibleMoves(piece, checkKingSafety = true) {
+                const moves = [];
+                const [row, col] = piece.position;
+
+                switch (piece.type) {
+                    case 'pawn':
+                        const direction = piece.color === 'white' ? -1 : 1;
+                        const startRow = piece.color === 'white' ? 6 : 1;
+                        
+                        // Forward moves
+                        if (this.isValidSquare(row + direction, col) && !this.squares[row + direction][col]) {
+                            moves.push([row + direction, col]);
+                            if (row === startRow && !this.squares[row + 2 * direction][col]) {
+                                moves.push([row + 2 * direction, col]);
+                            }
+                        }
+
+                        // Captures
+                        [[direction, -1], [direction, 1]].forEach(([dr, dc]) => {
+                            const newRow = row + dr;
+                            const newCol = col + dc;
+                            if (this.isValidSquare(newRow, newCol)) {
+                                const target = this.squares[newRow][newCol];
+                                if (target && target.color !== piece.color) {
+                                    moves.push([newRow, newCol]);
+                                }
+                            }
+                        });
                         break;
-                    case 'lost':
-                        gameState.balance -= hand.bet;
+
+                    case 'knight':
+                        const knightMoves = [
+                            [2, 1], [2, -1], [-2, 1], [-2, -1],
+                            [1, 2], [1, -2], [-1, 2], [-1, -2]
+                        ];
+                        knightMoves.forEach(([dr, dc]) => {
+                            const newRow = row + dr;
+                            const newCol = col + dc;
+                            if (this.isValidSquare(newRow, newCol) && 
+                               (!this.squares[newRow][newCol] || this.squares[newRow][newCol].color !== piece.color)) {
+                                moves.push([newRow, newCol]);
+                            }
+                        });
                         break;
-                    case 'blackjack':
-                        gameState.balance += hand.bet * 1.5;
+
+                    case 'bishop':
+                        this.addDirectionalMoves(moves, piece, [[-1, -1], [-1, 1], [1, -1], [1, 1]]);
                         break;
-                    case 'push':
+
+                    case 'rook':
+                        this.addDirectionalMoves(moves, piece, [[-1, 0], [1, 0], [0, -1], [0, 1]]);
+                        break;
+
+                    case 'queen':
+                        this.addDirectionalMoves(moves, piece, [
+                            [-1, 0], [1, 0], [0, -1], [0, 1],
+                            [-1, -1], [-1, 1], [1, -1], [1, 1]
+                        ]);
+                        break;
+
+                    case 'king':
+                        const kingMoves = [
+                            [-1, -1], [-1, 0], [-1, 1],
+                            [0, -1],         [0, 1],
+                            [1, -1],  [1, 0], [1, 1]
+                        ];
+                        kingMoves.forEach(([dr, dc]) => {
+                            const newRow = row + dr;
+                            const newCol = col + dc;
+                            if (this.isValidSquare(newRow, newCol) && 
+                               (!this.squares[newRow][newCol] || this.squares[newRow][newCol].color !== piece.color)) {
+                                moves.push([newRow, newCol]);
+                            }
+                        });
                         break;
                 }
-            });
-            document.getElementById('balance').textContent = gameState.balance;
-            document.getElementById('betAmount').max = gameState.balance;
-        }
 
-        function showResults() {
-            const results = gameState.playerHands.map((hand, index) => {
-                const handNumber = gameState.playerHands.length > 1 ? `Hand ${index + 1}: ` : '';
-                switch(hand.result) {
-                    case 'won': return `${handNumber}Win! (+$${hand.bet})`;
-                    case 'lost': return `${handNumber}Lost (-$${hand.bet})`;
-                    case 'blackjack': return `${handNumber}Blackjack! (+$${hand.bet * 1.5})`;
-                    case 'push': return `${handNumber}Push`;
+                return moves.filter(move => {
+                    if (!checkKingSafety) return true;
+                    const copyBoard = this.clone();
+                    copyBoard.movePiece(piece.position, move);
+                    return !copyBoard.isCheck(piece.color);
+                });
+            }
+
+            addDirectionalMoves(moves, piece, directions) {
+                const [row, col] = piece.position;
+                
+                directions.forEach(([dr, dc]) => {
+                    let newRow = row + dr;
+                    let newCol = col + dc;
+                    
+                    while (this.isValidSquare(newRow, newCol)) {
+                        const target = this.squares[newRow][newCol];
+                        
+                        if (!target) {
+                            moves.push([newRow, newCol]);
+                        } else {
+                            if (target.color !== piece.color) {
+                                moves.push([newRow, newCol]);
+                            }
+                            break;
+                        }
+                        
+                        newRow += dr;
+                        newCol += dc;
+                    }
+                });
+            }
+
+            isValidSquare(row, col) {
+                return row >= 0 && row < 8 && col >= 0 && col < 8;
+            }
+
+            movePiece(from, to) {
+                const [fromRow, fromCol] = from;
+                const [toRow, toCol] = to;
+                const piece = this.squares[fromRow][fromCol];
+                
+                if (!piece) return false;
+
+                // Handle pawn promotion
+                if (piece.type === 'pawn' && ((piece.color === 'white' && toRow === 0) || 
+                   (piece.color === 'black' && toRow === 7))) {
+                    piece.type = 'queen';
                 }
-            }).join('\n');
-            document.getElementById('gameStatus').textContent = results;
-        }
 
-        function prepareNewGame() {
-            // Reset game state for a new round while keeping previous round cards visible until a new bet is made
-            gameState.playerHands = [];
-            gameState.dealerHand = [];
-            gameState.currentHand = 0;
-            gameState.canSplit = true;
-            gameState.gameActive = false;
-            // Hide the New Game section/button
-            document.getElementById('newGameSection').classList.add('hidden');
-            // Clear previous game displays
-            document.getElementById('dealerCards').innerHTML = '';
-            document.querySelector('.player-hands').innerHTML = '';
-            document.getElementById('gameStatus').textContent = '';
-            // Show the betting section for a new round
-            document.getElementById('bettingSection').style.display = 'block';
-        }
-
-        function startGame() {
-            gameState.deck = createDeck();
-            shuffleDeck();
-            gameState.dealerHand = [];
-            // Create the initial player hand
-            gameState.playerHands = [{
-                cards: [],
-                bet: gameState.currentBet,
-                status: 'active'
-            }];
-            gameState.currentHand = 0;
-            gameState.canSplit = true;
-            gameState.gameActive = true;
-            // Hide the betting section once the game starts
-            document.getElementById('bettingSection').style.display = 'none';
-            document.getElementById('gameStatus').textContent = '';
-            // Deal initial cards
-            dealCard(gameState.playerHands[0].cards);
-            dealCard(gameState.dealerHand, false);
-            dealCard(gameState.playerHands[0].cards);
-            dealCard(gameState.dealerHand);
-            if (isBlackjack(gameState.dealerHand)) {
-                revealDealerCards();
-                gameState.gameActive = false;
-                concludeGame();
+                this.squares[toRow][toCol] = piece;
+                this.squares[fromRow][fromCol] = null;
+                piece.position = [toRow, toCol];
+                piece.hasMoved = true;
+                return true;
             }
-            updateDisplay();
-            document.getElementById('gameSection').style.display = 'block';
-        }
 
-        function placeBet() {
-            const betInput = document.getElementById('betAmount');
-            const betAmount = parseInt(betInput.value);
-            if (betAmount < 10 || betAmount > gameState.balance) {
-                alert(`Invalid bet amount. Must be between 10 and ${gameState.balance}`);
-                return;
+            clone() {
+                const clone = new Board();
+                clone.squares = this.squares.map(row => 
+                    row.map(piece => piece ? new Piece(piece.type, piece.color, [...piece.position]) : null)
+                );
+                clone.currentTurn = this.currentTurn;
+                return clone;
             }
-            gameState.currentBet = betAmount;
-            startGame();
         }
 
-        // Initialize the max bet value.
-        document.getElementById('betAmount').max = gameState.balance;
+        class Game {
+            constructor() {
+                this.board = new Board();
+                this.aiColor = 'black';
+                this.setupBoard();
+                this.updateStatus();
+            }
+
+            setupBoard() {
+                const boardElement = document.getElementById('board');
+                boardElement.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        square.addEventListener('click', (e) => this.handleSquareClick(e));
+                        boardElement.appendChild(square);
+                    }
+                }
+                this.updateBoard();
+            }
+
+            updateBoard() {
+                document.querySelectorAll('.square').forEach(square => {
+                    const row = parseInt(square.dataset.row);
+                    const col = parseInt(square.dataset.col);
+                    const piece = this.board.squares[row][col];
+                    square.innerHTML = piece ? piece.symbol : '';
+                    square.querySelectorAll('.possible-move').forEach(m => m.remove());
+                });
+
+                this.board.possibleMoves.forEach(([r, c]) => {
+                    const square = document.querySelector(`.square[data-row="${r}"][data-col="${c}"]`);
+                    const moveIndicator = document.createElement('div');
+                    moveIndicator.className = 'possible-move';
+                    square.appendChild(moveIndicator);
+                });
+            }
+
+            updateStatus() {
+                const statusElement = document.getElementById('status');
+                if (this.board.gameOver) {
+                    statusElement.textContent = 'Game Over!';
+                    return;
+                }
+
+                if (this.board.isCheckmate(this.board.currentTurn)) {
+                    statusElement.textContent = `Checkmate! ${this.board.currentTurn === 'white' ? 'Black' : 'White'} wins!`;
+                    this.board.gameOver = true;
+                } else if (this.board.isStalemate(this.board.currentTurn)) {
+                    statusElement.textContent = 'Stalemate!';
+                    this.board.gameOver = true;
+                } else if (this.board.isCheck(this.board.currentTurn)) {
+                    statusElement.textContent = `${this.board.currentTurn}'s turn - Check!`;
+                } else {
+                    statusElement.textContent = `${this.board.currentTurn}'s turn`;
+                }
+            }
+
+            handleSquareClick(event) {
+				if (this.board.gameOver || 
+				   (this.board.currentTurn === this.aiColor && !this.board.selectedPiece)) return;
+
+				// Get the actual square element even when clicking on the possible-move dot
+				const squareElement = event.target.closest('.square');
+				if (!squareElement) return;
+
+				const row = parseInt(squareElement.dataset.row);
+				const col = parseInt(squareElement.dataset.col);
+				const piece = this.board.squares[row][col];
+
+				if (this.board.selectedPiece) {
+					if (this.board.possibleMoves.some(([r, c]) => r === row && c === col)) {
+						this.makeMove([this.board.selectedPiece.position, [row, col]]);
+						
+						if (!this.board.gameOver && this.board.currentTurn === this.aiColor) {
+							setTimeout(() => this.aiMove(), 500);
+						}
+					}
+					this.board.selectedPiece = null;
+					this.board.possibleMoves = [];
+				} else if (piece && piece.color === this.board.currentTurn) {
+					this.board.selectedPiece = piece;
+					this.board.possibleMoves = this.board.getValidMoves(piece);
+				}
+
+				this.updateBoard();
+				document.querySelectorAll('.square').forEach(sq => sq.classList.remove('selected'));
+				if (this.board.selectedPiece) {
+					const selectedSquare = document.querySelector(
+						`.square[data-row="${this.board.selectedPiece.position[0]}"][data-col="${this.board.selectedPiece.position[1]}"]`
+					);
+					selectedSquare.classList.add('selected');
+				}
+			}
+
+            makeMove([from, to]) {
+                this.board.movePiece(from, to);
+                this.board.currentTurn = this.board.currentTurn === 'white' ? 'black' : 'white';
+                this.updateStatus();
+            }
+
+            aiMove() {
+				const pieceValues = {
+					pawn: 1,
+					knight: 3,
+					bishop: 3,
+					rook: 5,
+					queen: 9,
+					king: 0
+				};
+
+				const moves = this.board.getAllValidMoves(this.aiColor);
+				if (moves.length === 0) return;
+
+				const evaluatedMoves = moves.map(move => {
+					const copiedBoard = this.board.clone();
+					const from = move.from;
+					const to = move.to;
+					const movedPiece = copiedBoard.squares[from[0]][from[1]];
+					const targetPiece = copiedBoard.squares[to[0]][to[1]];
+
+					copiedBoard.movePiece(from, to);
+					copiedBoard.currentTurn = copiedBoard.currentTurn === 'white' ? 'black' : 'white';
+
+					let score = 0;
+					const isCheckmate = copiedBoard.isCheckmate(copiedBoard.currentTurn);
+					const isCheck = copiedBoard.isCheck(copiedBoard.currentTurn);
+					const capturedValue = targetPiece ? pieceValues[targetPiece.type] : 0;
+					const isAttacked = copiedBoard.isSquareAttacked(to, copiedBoard.currentTurn);
+
+					// Checkmate and check bonuses
+					if (isCheckmate) {
+						score += 1000;
+					} else if (isCheck) {
+						score += 100;
+					}
+
+					// Material gain
+					score += capturedValue;
+
+					// Penalize moving into attacked squares
+					if (isAttacked) {
+						score -= pieceValues[movedPiece.type];
+					}
+
+					// Pawn advancement bonus
+					if (movedPiece.type === 'pawn') {
+						const startRow = movedPiece.color === 'white' ? 6 : 1;
+						const advancement = Math.abs(to[0] - startRow);
+						score += advancement * 0.3;
+					}
+
+					// Threat detection bonus
+					const attackMoves = copiedBoard.getPossibleMoves(movedPiece, false);
+					const threatSquares = attackMoves.filter(([r, c]) => {
+						const target = copiedBoard.squares[r][c];
+						return target && target.color !== movedPiece.color;
+					});
+					const threatScore = threatSquares.reduce((sum, [r, c]) => {
+						return sum + (pieceValues[copiedBoard.squares[r][c].type] * 0.4);
+					}, 0);
+					score += threatScore;
+
+					// King safety evaluation
+					const aiKingPos = copiedBoard.getKingPosition(this.aiColor);
+					let kingSafetyScore = 0;
+					const kingDirections = [
+						[-1, -1], [-1, 0], [-1, 1],
+						[0, -1],  [0, 1],
+						[1, -1],  [1, 0], [1, 1]
+					];
+					kingDirections.forEach(([dr, dc]) => {
+						const r = aiKingPos[0] + dr;
+						const c = aiKingPos[1] + dc;
+						if (copiedBoard.isValidSquare(r, c) && copiedBoard.isSquareAttacked([r, c], this.aiColor)) {
+							kingSafetyScore -= 0.6;
+						}
+					});
+					score += kingSafetyScore;
+
+					// Bishop mobility bonus
+					if (movedPiece.type === 'bishop') {
+						const mobility = copiedBoard.getPossibleMoves(movedPiece).length;
+						score += mobility * 0.15;
+					}
+
+					// Rook open file bonus
+					if (movedPiece.type === 'rook') {
+						const file = to[1];
+						let isOpen = true;
+						for (let r = 0; r < 8; r++) {
+							if (copiedBoard.squares[r][file]?.type === 'pawn') {
+								isOpen = false;
+								break;
+							}
+						}
+						if (isOpen) score += 0.8;
+					}
+
+					// Knight outpost bonus
+					if (movedPiece.type === 'knight') {
+						const [r, c] = to;
+						const enemyPawnDir = movedPiece.color === 'white' ? 1 : -1;
+						const attackSquares = [
+							[r + enemyPawnDir, c - 1],
+							[r + enemyPawnDir, c + 1]
+						];
+						const isOutpost = !attackSquares.some(([pr, pc]) => 
+							copiedBoard.isValidSquare(pr, pc) && 
+							copiedBoard.squares[pr][pc]?.type === 'pawn' && 
+							copiedBoard.squares[pr][pc].color !== movedPiece.color
+						);
+						if (isOutpost) score += 0.6;
+					}
+
+					return { move, score };
+				});
+
+				// Select best move with some randomness
+				evaluatedMoves.sort((a, b) => b.score - a.score);
+				const topMoves = evaluatedMoves.slice(0, 3).filter(m => m.score === evaluatedMoves[0].score);
+				const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)].move;
+
+				this.makeMove([selectedMove.from, selectedMove.to]);
+				this.updateBoard();
+			}
+
+            reset() {
+                this.board = new Board();
+                this.setupBoard();
+                this.updateStatus();
+            }
+        }
+
+        const game = new Game();
     </script>
 </body>
 </html>
