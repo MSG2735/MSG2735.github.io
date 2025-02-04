@@ -120,6 +120,39 @@
             font-size: 16px;
             cursor: pointer;
         }
+		
+		.move-history {
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .move-entry {
+            display: flex;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+        }
+
+        .move-number {
+            color: #888;
+            min-width: 40px;
+        }
+
+        .white-move {
+            color: #fff;
+            margin-right: 20px;
+        }
+
+        .black-move {
+            color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -129,6 +162,7 @@
         <div class="controls">
             <button onclick="game.reset()">New Game</button>
         </div>
+        <div class="move-history" id="moveHistory"></div>
     </div>
 
     <script>
@@ -398,6 +432,7 @@
             constructor() {
                 this.board = new Board();
                 this.aiColor = 'black';
+                this.moveHistory = [];
                 this.setupBoard();
                 this.updateStatus();
             }
@@ -624,11 +659,105 @@
 				this.makeMove([selectedMove.from, selectedMove.to]);
 				this.updateBoard();
 			}
+			
+			makeMove([from, to]) {
+                const piece = this.board.squares[from[0]][from[1]];
+                const targetPiece = this.board.squares[to[0]][to[1]];
+                this.board.movePiece(from, to);
+                this.board.currentTurn = this.board.currentTurn === 'white' ? 'black' : 'white';
+                this.recordMove(piece, from, to, targetPiece);
+                this.updateStatus();
+            }
+
+            recordMove(piece, from, to, targetPiece) {
+                const fromNotation = this.positionToNotation(from);
+                const toNotation = this.positionToNotation(to);
+                
+                this.moveHistory.push({
+                    color: piece.color,
+                    pieceSymbol: piece.symbol,
+                    from: fromNotation,
+                    to: toNotation,
+                    isCapture: !!targetPiece
+                });
+                
+                this.updateMoveHistoryDisplay();
+            }
+
+            positionToNotation(position) {
+                const [row, col] = position;
+                const file = String.fromCharCode(97 + col);
+                const rank = 8 - row;
+                return `${file}${rank}`;
+            }
+
+            updateMoveHistoryDisplay() {
+                const historyElement = document.getElementById('moveHistory');
+                historyElement.innerHTML = '';
+
+                for (let i = 0; i < this.moveHistory.length; i += 2) {
+                    const moveNumber = Math.floor(i / 2) + 1;
+                    const whiteMove = this.moveHistory[i];
+                    const blackMove = this.moveHistory[i + 1];
+
+                    const entry = document.createElement('div');
+                    entry.className = 'move-entry';
+
+                    const numberSpan = document.createElement('span');
+                    numberSpan.className = 'move-number';
+                    numberSpan.textContent = `${moveNumber}.`;
+                    entry.appendChild(numberSpan);
+
+                    if (whiteMove) {
+                        const whiteSpan = document.createElement('span');
+                        whiteSpan.className = 'white-move';
+                        whiteSpan.textContent = `${whiteMove.pieceSymbol} ${whiteMove.from}→${whiteMove.to}`;
+                        if (whiteMove.isCapture) whiteSpan.textContent += 'x';
+                        entry.appendChild(whiteSpan);
+                    }
+
+                    if (blackMove) {
+                        const blackSpan = document.createElement('span');
+                        blackSpan.className = 'black-move';
+                        blackSpan.textContent = `${blackMove.pieceSymbol} ${blackMove.from}→${blackMove.to}`;
+                        if (blackMove.isCapture) blackSpan.textContent += 'x';
+                        entry.appendChild(blackSpan);
+                    }
+
+                    historyElement.appendChild(entry);
+                }
+
+                // Handle odd number of moves
+                if (this.moveHistory.length % 2 !== 0) {
+                    const moveNumber = Math.ceil(this.moveHistory.length / 2);
+                    const whiteMove = this.moveHistory[this.moveHistory.length - 1];
+
+                    const entry = document.createElement('div');
+                    entry.className = 'move-entry';
+
+                    const numberSpan = document.createElement('span');
+                    numberSpan.className = 'move-number';
+                    numberSpan.textContent = `${moveNumber}.`;
+                    entry.appendChild(numberSpan);
+
+                    const whiteSpan = document.createElement('span');
+                    whiteSpan.className = 'white-move';
+                    whiteSpan.textContent = `${whiteMove.pieceSymbol} ${whiteMove.from}→${whiteMove.to}`;
+                    if (whiteMove.isCapture) whiteSpan.textContent += 'x';
+                    entry.appendChild(whiteSpan);
+
+                    historyElement.appendChild(entry);
+                }
+
+                historyElement.scrollTop = historyElement.scrollHeight;
+            }
 
             reset() {
                 this.board = new Board();
+                this.moveHistory = [];
                 this.setupBoard();
                 this.updateStatus();
+                document.getElementById('moveHistory').innerHTML = '';
             }
         }
 
