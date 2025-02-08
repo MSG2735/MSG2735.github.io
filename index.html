@@ -103,6 +103,7 @@
                 <button onclick="playerHit()" id="hitButton">Hit</button>
                 <button onclick="playerStand()" id="standButton">Stand</button>
                 <button onclick="splitHand()" id="splitButton" disabled>Split</button>
+                <button onclick="playerDouble()" id="doubleButton" disabled>Double</button>
             </div>
 
             <div class="status" id="gameStatus"></div>
@@ -215,15 +216,21 @@
         function splitHand() {
             if (!gameState.canSplit) return;
             const currentHand = gameState.playerHands[gameState.currentHand];
-            // Ensure the hand is eligible for splitting:
-            if (currentHand.cards.length === 2 && currentHand.cards[0].value === currentHand.cards[1].value && gameState.playerHands.length < 2) {
+            if (currentHand.cards.length === 2 && 
+                currentHand.cards[0].value === currentHand.cards[1].value && 
+                gameState.playerHands.length < 2 &&
+                gameState.balance >= currentHand.bet) {
+                
+                // Deduct additional bet for split
+                gameState.balance -= currentHand.bet;
+                document.getElementById('balance').textContent = gameState.balance;
+
                 const cardToSplit = currentHand.cards.pop();
                 const newHand = {
                     cards: [cardToSplit],
                     bet: currentHand.bet,
                     status: 'active'
                 };
-                // Deal one new card to each hand:
                 dealCard(currentHand.cards);
                 dealCard(newHand.cards);
                 gameState.playerHands.push(newHand);
@@ -308,8 +315,15 @@
             // Enable or disable controls based on the current state:
             const currentHand = gameState.playerHands[gameState.currentHand];
             const canSplit = gameState.canSplit && currentHand && currentHand.cards.length === 2 &&
-                             currentHand.cards[0].value === currentHand.cards[1].value && gameState.playerHands.length < 2;
+			currentHand.cards[0].value === currentHand.cards[1].value && 
+			gameState.playerHands.length < 2 &&
+			gameState.balance >= currentHand.bet;
+            
+            const canDouble = currentHand && currentHand.status === 'active' && 
+			currentHand.cards.length === 2 && 
+			gameState.balance >= currentHand.bet;
             document.getElementById('splitButton').disabled = !canSplit || !gameState.gameActive;
+            document.getElementById('doubleButton').disabled = !canDouble || !gameState.gameActive;
             document.getElementById('hitButton').disabled = !gameState.gameActive || (currentHand && currentHand.status !== 'active');
             document.getElementById('standButton').disabled = !gameState.gameActive || (currentHand && currentHand.status !== 'active');
         }
@@ -322,20 +336,20 @@
             gameState.playerHands.forEach(hand => {
                 switch(hand.result) {
                     case 'won':
-                        gameState.balance += hand.bet;
+                        gameState.balance += hand.bet * 2;
                         break;
                     case 'lost':
-                        gameState.balance -= hand.bet;
+                        // Bet already deducted
                         break;
                     case 'blackjack':
-                        gameState.balance += hand.bet * 1.5;
+                        gameState.balance += hand.bet * 2.5;
                         break;
                     case 'push':
+                        gameState.balance += hand.bet;
                         break;
                 }
             });
             document.getElementById('balance').textContent = gameState.balance;
-            document.getElementById('betAmount').max = gameState.balance;
         }
 
         function showResults() {
@@ -405,8 +419,41 @@
                 alert(`Invalid bet amount. Must be between 10 and ${gameState.balance}`);
                 return;
             }
+            gameState.balance -= betAmount;
+            document.getElementById('balance').textContent = gameState.balance;
             gameState.currentBet = betAmount;
             startGame();
+        }
+		
+		function playerDouble() {
+            const currentHand = gameState.playerHands[gameState.currentHand];
+            if (currentHand.cards.length !== 2 || gameState.balance < currentHand.bet) {
+                alert('Cannot double down');
+                return;
+            }
+            
+            // Deduct additional bet
+            gameState.balance -= currentHand.bet;
+            document.getElementById('balance').textContent = gameState.balance;
+            
+            // Double the bet
+            currentHand.bet *= 2;
+            
+            // Deal one card and stand
+            dealCard(currentHand.cards);
+            const handValue = calculateHandValue(currentHand.cards);
+            
+            if (handValue > 21) {
+                currentHand.status = 'bust';
+            } else {
+                currentHand.status = 'stand';
+            }
+            
+            gameState.currentHand++;
+            if (gameState.currentHand >= gameState.playerHands.length) {
+                dealerTurn();
+            }
+            updateDisplay();
         }
 
         // Initialize the max bet value.
