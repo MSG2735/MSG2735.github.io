@@ -248,6 +248,55 @@
             border-radius: 10px;
             display: none;
         }
+		
+		.color-selector {
+			margin-bottom: 20px;
+		}
+		
+		.color-options {
+			display: flex;
+			gap: 15px;
+			margin-top: 10px;
+		}
+
+		.color-option {
+			cursor: pointer;
+			padding: 10px;
+			border-radius: 5px;
+			border: 2px solid transparent;
+			text-align: center;
+		}
+
+		.color-option.selected {
+			border-color: #4CAF50;
+			background-color: #f0f8f0;
+		}
+
+		.captured-pieces-container {
+			background-color: white;
+			border-radius: 5px;
+			padding: 10px;
+			margin-bottom: 15px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		.captured-pieces {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 5px 0;
+			min-height: 30px;
+		}
+
+		.captured-piece {
+			font-size: 20px;
+			margin-right: 5px;
+		}
+
+		.material-score {
+			font-weight: bold;
+			text-align: right;
+			margin-top: 5px;
+		}
     </style>
 </head>
 <body>
@@ -269,6 +318,19 @@
                 Figurine
             </div>
         </div>
+		<div class="color-selector">
+			<h3>Choose Your Color</h3>
+			<div class="color-options">
+				<div class="color-option selected" data-color="white">
+					<span style="font-size: 24px;">♙ ♖ ♘ ♗ ♕ ♔</span><br>
+					Play as White
+				</div>
+				<div class="color-option" data-color="black">
+					<span style="font-size: 24px;">♟ ♜ ♞ ♝ ♛ ♚</span><br>
+					Play as Black
+				</div>
+			</div>
+		</div>
     </div>
     
     <div class="game-container">
@@ -295,6 +357,20 @@
                     <button id="hint-btn">Hint</button>
                 </div>
             </div>
+			
+			<!-- Add this to side-panel div, after status-panel and before move-history -->
+			<div class="captured-pieces-container">
+				<h3>Captured Pieces</h3>
+				<div>
+					<strong>White:</strong> 
+					<div class="captured-pieces" id="white-captured"></div>
+				</div>
+				<div>
+					<strong>Black:</strong>
+					<div class="captured-pieces" id="black-captured"></div>
+				</div>
+				<div class="material-score" id="material-score">Material: Even</div>
+			</div>
             
             <div class="move-history">
                 <h3>Move History</h3>
@@ -337,6 +413,15 @@
                 this.promotionCallback = null;
                 this.gameOver = false;
                 this.botThinking = false;
+				this.playerColor = 'white';
+				this.capturedPieces = {
+					white: [],
+					black: []
+				};
+				this.materialScore = {
+					white: 0,
+					black: 0
+				};
                 
                 // Piece values for AI evaluation
                 this.pieceValues = {
@@ -569,18 +654,28 @@
                         this.updateBoard();
                     });
                 });
+				const colorOptions = document.querySelectorAll('.color-option');
+				colorOptions.forEach(option => {
+					option.addEventListener('click', () => {
+						colorOptions.forEach(o => o.classList.remove('selected'));
+						option.classList.add('selected');
+						this.playerColor = option.dataset.color;
+					});
+				});
             }
             
             startGame() {
-                if (!this.gameStarted) {
-                    this.gameStarted = true;
-                    document.getElementById('start-btn').disabled = true;
-                    document.querySelector('.piece-selector').style.display = 'none';
-                    if (this.currentPlayer === 'black') {
-                        this.makeBotMove();
-                    }
-                }
-            }
+				if (!this.gameStarted) {
+					this.gameStarted = true;
+					document.getElementById('start-btn').disabled = true;
+					document.querySelector('.piece-selector').style.display = 'none';
+					
+					// If player chose black, bot should make first move as white
+					if (this.playerColor === 'black' && this.currentPlayer === 'white') {
+						this.makeBotMove();
+					}
+				}
+			}
             
             resetGame() {
                 this.board = this.createInitialBoard();
@@ -603,6 +698,16 @@
                 this.initializeBoard();
                 this.updateBoard();
                 this.updateMoveHistory();
+				
+				this.capturedPieces = {
+					white: [],
+					black: []
+				};
+				this.materialScore = {
+					white: 0,
+					black: 0
+				};
+				this.renderCapturedPieces();
                 
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('undo-btn').disabled = true;
@@ -610,37 +715,56 @@
             }
             
             undoMove() {
-                if (this.moveHistory.length === 0) return;
-                
-                // Remove last move
-                const lastMove = this.moveHistory.pop();
-                
-                // Restore previous board state
-                this.board = JSON.parse(JSON.stringify(lastMove.boardBeforeMove));
-                this.currentPlayer = lastMove.player;
-                this.castlingRights = lastMove.castlingRights;
-                this.enPassantTarget = lastMove.enPassantTarget;
-                this.kingPositions = lastMove.kingPositions;
-                this.halfMoveClock = lastMove.halfMoveClock;
-                this.fullMoveNumber = lastMove.fullMoveNumber;
-                
-                // Get previous move for highlighting
-                this.lastMove = this.moveHistory.length > 0 ? 
-                    this.moveHistory[this.moveHistory.length - 1] : null;
-                
-                // Check if king is in check after undoing
-                this.inCheck = this.isKingInCheck(this.currentPlayer);
-                this.gameOver = false;
-                
-                // Update board and move history
-                this.updateBoard();
-                this.updateMoveHistory();
-                
-                // Disable undo button if no more moves
-                if (this.moveHistory.length === 0) {
-                    document.getElementById('undo-btn').disabled = true;
-                }
-            }
+				if (this.moveHistory.length === 0) return;
+				
+				// Get the last move once
+				const lastMove = this.moveHistory.pop();
+				
+				// Remove captured piece from the captured pieces array if any
+				if (lastMove.capturedPiece) {
+					const pieceColor = lastMove.capturedPiece === lastMove.capturedPiece.toLowerCase() ? 'black' : 'white';
+					const opponentColor = pieceColor === 'white' ? 'black' : 'white';
+					const pieceType = lastMove.capturedPiece.toLowerCase();
+					
+					// Remove from captured pieces array
+					const index = this.capturedPieces[pieceColor].indexOf(lastMove.capturedPiece);
+					if (index > -1) {
+						this.capturedPieces[pieceColor].splice(index, 1);
+					}
+					
+					// Update material score
+					this.materialScore[opponentColor] -= this.pieceValues[pieceType];
+				}
+				
+				// Update captured pieces display
+				this.renderCapturedPieces();
+				
+				// Restore previous board state
+				this.board = JSON.parse(JSON.stringify(lastMove.boardBeforeMove));
+				this.currentPlayer = lastMove.player;
+				this.castlingRights = lastMove.castlingRights;
+				this.enPassantTarget = lastMove.enPassantTarget;
+				this.kingPositions = lastMove.kingPositions;
+				this.halfMoveClock = lastMove.halfMoveClock;
+				this.fullMoveNumber = lastMove.fullMoveNumber;
+				
+				// Get previous move for highlighting
+				this.lastMove = this.moveHistory.length > 0 ? 
+					this.moveHistory[this.moveHistory.length - 1] : null;
+				
+				// Check if king is in check after undoing
+				this.inCheck = this.isKingInCheck(this.currentPlayer);
+				this.gameOver = false;
+				
+				// Update board and move history
+				this.updateBoard();
+				this.updateMoveHistory();
+				
+				// Disable undo button if no more moves
+				if (this.moveHistory.length === 0) {
+					document.getElementById('undo-btn').disabled = true;
+				}
+			}
             
             showHint() {
                 if (!this.gameStarted || this.gameOver || this.botThinking) return;
@@ -855,38 +979,44 @@
                     fullMoveNumber: previousFullMoveNumber
                 };
                 
-                this.moveHistory.push(this.lastMove);
+                // Modify this part in executeMove method - after storing the move in history
+				this.moveHistory.push(this.lastMove);
+
+				// Add this line to update captured pieces
+				if (targetPiece) {
+					this.updateCapturedPieces(targetPiece);
+				}
                 
                 // Enable undo button
                 document.getElementById('undo-btn').disabled = false;
                 
                 // Switch player
-                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-                
-                // Increment full move number if black just moved
-                if (this.currentPlayer === 'white') {
-                    this.fullMoveNumber++;
-                }
-                
-                // Check for check
-                this.inCheck = this.isKingInCheck(this.currentPlayer);
-                
-                // Check for checkmate or stalemate
-                const hasLegalMoves = this.hasAnyLegalMoves(this.currentPlayer);
-                if (!hasLegalMoves) {
-                    this.gameOver = true;
-                }
-                
-                // Update board and move history
-                this.clearSelection();
-                this.updateBoard();
-                this.updateMoveHistory();
-                
-                // If playing against bot and it's bot's turn
-                if (this.gameStarted && !this.gameOver && 
-                    ((this.currentPlayer === 'black'))) {
-                    this.makeBotMove();
-                }
+				this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+
+				// Increment full move number if black just moved
+				if (this.currentPlayer === 'white') {
+					this.fullMoveNumber++;
+				}
+
+				// Check for check
+				this.inCheck = this.isKingInCheck(this.currentPlayer);
+
+				// Check for checkmate or stalemate
+				const hasLegalMoves = this.hasAnyLegalMoves(this.currentPlayer);
+				if (!hasLegalMoves) {
+					this.gameOver = true;
+				}
+
+				// Update board and move history
+				this.clearSelection();
+				this.updateBoard();
+				this.updateMoveHistory();
+
+				// If playing against bot and it's bot's turn
+				if (this.gameStarted && !this.gameOver && 
+					(this.currentPlayer !== this.playerColor)) {
+					this.makeBotMove();
+				}
             }
             
             promotePawn(fromRow, fromCol, toRow, toCol) {
@@ -956,38 +1086,44 @@
                     fullMoveNumber: previousFullMoveNumber
                 };
                 
-                this.moveHistory.push(this.lastMove);
+                // Modify this part in completePromotion - after storing the move in history
+				this.moveHistory.push(this.lastMove);
+
+				// Add this line to update captured pieces
+				if (targetPiece) {
+					this.updateCapturedPieces(targetPiece);
+				}
                 
                 // Enable undo button
                 document.getElementById('undo-btn').disabled = false;
                 
                 // Switch player
-                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-                
-                // Increment full move number if black just moved
-                if (this.currentPlayer === 'white') {
-                    this.fullMoveNumber++;
-                }
-                
-                // Check for check
-                this.inCheck = this.isKingInCheck(this.currentPlayer);
-                
-                // Check for checkmate or stalemate
-                const hasLegalMoves = this.hasAnyLegalMoves(this.currentPlayer);
-                if (!hasLegalMoves) {
-                    this.gameOver = true;
-                }
-                
-                // Update board and move history
-                this.clearSelection();
-                this.updateBoard();
-                this.updateMoveHistory();
-                
-                // If playing against bot and it's bot's turn
-                if (this.gameStarted && !this.gameOver && 
-                    ((this.currentPlayer === 'black'))) {
-                    this.makeBotMove();
-                }
+				this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+
+				// Increment full move number if black just moved
+				if (this.currentPlayer === 'white') {
+					this.fullMoveNumber++;
+				}
+
+				// Check for check
+				this.inCheck = this.isKingInCheck(this.currentPlayer);
+
+				// Check for checkmate or stalemate
+				const hasLegalMoves = this.hasAnyLegalMoves(this.currentPlayer);
+				if (!hasLegalMoves) {
+					this.gameOver = true;
+				}
+
+				// Update board and move history
+				this.clearSelection();
+				this.updateBoard();
+				this.updateMoveHistory();
+
+				// If playing against bot and it's bot's turn
+				if (this.gameStarted && !this.gameOver && 
+					(this.currentPlayer !== this.playerColor)) {
+					this.makeBotMove();
+				}
                 
                 this.isPromotion = false;
             }
@@ -1515,33 +1651,34 @@
             
             // Bot AI implementation
             makeBotMove() {
-                if (this.gameOver || !this.gameStarted) return;
-                
-                // Show thinking indicator
-                this.botThinking = true;
-                document.querySelector('.thinking').style.display = 'block';
-                
-                // Use setTimeout to allow UI to update before calculation
-                setTimeout(() => {
-                    const bestMove = this.findBestMove('black', 3);
-                    
-                    if (bestMove) {
-                        // Select piece
-                        this.selectedPiece = {
-                            row: bestMove.fromRow,
-                            col: bestMove.fromCol,
-                            piece: this.board[bestMove.fromRow][bestMove.fromCol]
-                        };
-                        
-                        // Execute move
-                        this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
-                    }
-                    
-                    // Hide thinking indicator
-                    this.botThinking = false;
-                    document.querySelector('.thinking').style.display = 'none';
-                }, 500);
-            }
+				if (this.gameOver || !this.gameStarted) return;
+				
+				// Show thinking indicator
+				this.botThinking = true;
+				document.querySelector('.thinking').style.display = 'block';
+				
+				// Use setTimeout to allow UI to update before calculation
+				setTimeout(() => {
+					const botColor = this.playerColor === 'white' ? 'black' : 'white';
+					const bestMove = this.findBestMove(botColor, 3);
+					
+					if (bestMove) {
+						// Select piece
+						this.selectedPiece = {
+							row: bestMove.fromRow,
+							col: bestMove.fromCol,
+							piece: this.board[bestMove.fromRow][bestMove.fromCol]
+						};
+						
+						// Execute move
+						this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
+					}
+					
+					// Hide thinking indicator
+					this.botThinking = false;
+					document.querySelector('.thinking').style.display = 'none';
+				}, 500);
+			}
             
             findBestMove(color, depth) {
                 const legalMoves = this.getAllLegalMoves(color);
@@ -2133,6 +2270,59 @@
                 
                 return perspective === 'white' ? score : -score;
             }
+			
+			// Add these methods to the ChessGame class
+			updateCapturedPieces(capturedPiece) {
+				if (!capturedPiece) return;
+				
+				const pieceColor = capturedPiece === capturedPiece.toLowerCase() ? 'black' : 'white';
+				const opponentColor = pieceColor === 'white' ? 'black' : 'white';
+				const pieceType = capturedPiece.toLowerCase();
+				
+				// Add to captured pieces array
+				this.capturedPieces[pieceColor].push(capturedPiece);
+				
+				// Update material score
+				this.materialScore[opponentColor] += this.pieceValues[pieceType];
+				
+				this.renderCapturedPieces();
+			}
+
+			renderCapturedPieces() {
+				const whiteContainer = document.getElementById('white-captured');
+				const blackContainer = document.getElementById('black-captured');
+				const scoreDisplay = document.getElementById('material-score');
+				
+				// Clear containers
+				whiteContainer.innerHTML = '';
+				blackContainer.innerHTML = '';
+				
+				// Render white captured pieces
+				this.capturedPieces.white.forEach(piece => {
+					const pieceElement = document.createElement('span');
+					pieceElement.className = 'captured-piece';
+					pieceElement.textContent = this.getPieceSymbol(piece);
+					whiteContainer.appendChild(pieceElement);
+				});
+				
+				// Render black captured pieces
+				this.capturedPieces.black.forEach(piece => {
+					const pieceElement = document.createElement('span');
+					pieceElement.className = 'captured-piece';
+					pieceElement.textContent = this.getPieceSymbol(piece);
+					blackContainer.appendChild(pieceElement);
+				});
+				
+				// Update material score display
+				const scoreDifference = this.materialScore.white - this.materialScore.black;
+				if (scoreDifference > 0) {
+					scoreDisplay.textContent = `Material: White +${scoreDifference.toFixed(1)}`;
+				} else if (scoreDifference < 0) {
+					scoreDisplay.textContent = `Material: Black +${Math.abs(scoreDifference).toFixed(1)}`;
+				} else {
+					scoreDisplay.textContent = 'Material: Even';
+				}
+			}
         }
         
         // Initialize the game
