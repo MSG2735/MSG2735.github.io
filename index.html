@@ -2102,7 +2102,7 @@
 				}
 				
 				// Update stats and game history
-				const profit = dealerScore === 21 ? 0 : (gameState.currentBet * 1.5);
+				const profit = dealerScore === 21 ? 0 : (gameState.currentBet * 0.5);
 				gameState.stats.profit += profit;
 				updateStats();
 				
