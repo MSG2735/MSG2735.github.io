@@ -39,7 +39,7 @@
 		.container {
 			max-width: 1200px;
 			margin: 0 auto;
-			padding: 20px;
+			padding: 5px;
 		}
 
 		header {
@@ -48,8 +48,8 @@
 			align-items: center;
 			padding: 10px 20px;
 			background-color: rgba(0, 0, 0, 0.3);
-			border-radius: 10px;
-			margin-bottom: 20px;
+			border-radius: 10px 10px 0 0; /* Round only top corners */
+			margin-bottom: 0;
 			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 		}
 
@@ -456,7 +456,6 @@
 
 		.message-area {
 			padding: 15px;
-			border-radius: 10px;
 			text-align: center;
 			font-size: 1.3rem;
 			font-weight: bold;
@@ -465,8 +464,9 @@
 			align-items: center;
 			justify-content: center;
 			background: rgba(0, 0, 0, 0.3);
-			margin: 15px 0;
 			text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+			border-radius: 0 0 10px 10px; /* Round only bottom corners */
+			border-top: 1px solid rgba(255, 255, 255, 0.1); /* Add subtle separator */
 		}
 
 		.result-win {
@@ -680,10 +680,27 @@
 		}
 
 		.history-item {
-			display: flex;
-			justify-content: space-between;
+			display: grid;
+			/* Change the column widths to make the center column fixed width */
+			grid-template-columns: 80px minmax(80px, auto) 80px;
+			gap: 10px;
 			padding: 8px;
 			border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			align-items: center;
+		}
+
+		.history-item span:nth-child(1) { /* Result */
+			text-align: left;
+		}
+
+		.history-item span:nth-child(2) { /* Time */
+			text-align: center;
+			justify-self: center; /* Center the timestamp */
+			width: 100%; /* Ensure the timestamp takes full width of its column */
+		}
+
+		.history-item span:nth-child(3) { /* Profit */
+			text-align: right;
 		}
 
 		.history-win {
