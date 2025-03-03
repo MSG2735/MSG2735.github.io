@@ -345,6 +345,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   function getInitialGameState(): GameState {
     if (typeof window !== 'undefined') {
       try {
+        // Try to load the full game state first
+        const savedGameState = localStorage.getItem('blackjack-game-state');
+        if (savedGameState) {
+          const parsedState = JSON.parse(savedGameState) as GameState;
+          
+          // Convert dates in the state if needed
+          return parsedState;
+        }
+        
+        // Fallback to just loading the balance if full state isn't available
         const savedBalance = localStorage.getItem('blackjack-balance');
         if (savedBalance) {
           const balance = parseInt(savedBalance);
@@ -357,7 +367,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           };
         }
       } catch (error) {
-        console.error('Error loading balance from localStorage:', error);
+        console.error('Error loading game state from localStorage:', error);
       }
     }
     return initialGameState;
@@ -499,13 +509,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (initialized) {
       if (typeof window !== 'undefined') {
         localStorage.setItem('blackjack-game-state', JSON.stringify(gameState));
-        localStorage.setItem('blackjack-game-stats', JSON.stringify(gameStats));
+        localStorage.setItem('blackjack-stats', JSON.stringify(gameStats));
         localStorage.setItem('blackjack-settings', JSON.stringify(settings));
         localStorage.setItem('blackjack-history', JSON.stringify(matchHistory));
         localStorage.setItem('blackjack-purchase-history', JSON.stringify(purchaseHistory));
       }
     }
-  }, [gameState.player.balance, gameStats, settings, matchHistory, purchaseHistory, initialized]);
+  }, [gameState, gameStats, settings, matchHistory, purchaseHistory, initialized]);
   
   // Handle reset actions
   const handleReset = () => {

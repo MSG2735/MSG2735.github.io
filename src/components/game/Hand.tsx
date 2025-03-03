@@ -76,8 +76,8 @@ const Hand = ({ hand, isDealer = false, currentHand = false }: HandProps) => {
               <div
                 key={`${card.suit}-${card.rank}-${index}`}
                 style={{
-                  marginLeft: index === 0 ? '0' : '-65px',
-                  zIndex: cards.length - index,
+                  marginRight: index === cards.length - 1 ? '0' : '-65px',
+                  zIndex: index + 1,
                 }}
               >
                 <Card card={card} index={index} isDealer={isDealer} />
@@ -96,23 +96,8 @@ const Hand = ({ hand, isDealer = false, currentHand = false }: HandProps) => {
           </div>
         )}
       </div>
-      
-      {/* Status messages - fixed height container */}
-      <div className="h-8 flex items-center justify-center">
-        {isBlackjack && (
-          <div className="text-xl font-bold text-yellow-400">
-            BLACKJACK!
-          </div>
-        )}
-        
-        {isBusted && (
-          <div className="text-xl font-bold text-red-500">
-            BUSTED!
-          </div>
-        )}
-      </div>
     </div>
   );
 };
 
-export default Hand; 
+export default Hand;

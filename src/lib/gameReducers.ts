@@ -210,10 +210,11 @@ export function handleStand(state: GameState): GameState {
   let nextHandIndex = currentHandIndex;
   
   // Check if the player busted after doubling down
-  if (updatedHand.isBusted) {
+  const currentHand = updatedHands[currentHandIndex];
+  if (currentHand.isBusted) {
     // If busted, go straight to evaluating (skip dealer's turn)
     gamePhase = 'evaluating';
-    message = `Busted after doubling down! (-$${updatedHand.bet})`;
+    message = `Busted after doubling down! (-$${currentHand.bet})`;
     soundManager?.play('playerLoses');
   } else if (areAllHandsComplete(updatedHands)) {
     gamePhase = 'dealerTurn';
