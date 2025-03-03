@@ -5,7 +5,14 @@ import { useTheme } from '@/lib/ThemeContext';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+
+declare global {
+  interface Window {
+    soundManager?: {
+      setVolume: (value: number) => void;
+    };
+  }
+}
 
 export default function SettingsPage() {
   const { dispatch } = useGame();
@@ -14,7 +21,6 @@ export default function SettingsPage() {
     cardStyle, 
     tableColor, 
     fontSize, 
-    darkMode,
     updateTheme,
     updateCardStyle,
     updateTableColor,
@@ -22,7 +28,6 @@ export default function SettingsPage() {
     toggleDarkMode
   } = useTheme();
   
-  const [isSaved, setIsSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -121,7 +126,6 @@ export default function SettingsPage() {
     localStorage.setItem('blackjack-soundEffects', userSettings.soundEffects.toString());
     localStorage.setItem('blackjack-animations', userSettings.animations.toString());
     
-    setIsSaved(true);
     setSuccessMessage('Settings saved successfully!');
     setShowSuccess(true);
     

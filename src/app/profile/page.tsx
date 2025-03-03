@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-  const { gameState, gameStats, matchHistory, purchaseHistory, dispatch, updateSettings } = useGame();
+  const { gameState, gameStats, matchHistory, purchaseHistory, dispatch } = useGame();
   const { player } = gameState;
   const { wins, losses, pushes, blackjacks, winRate, profit } = gameStats;
   const router = useRouter();
@@ -375,7 +375,7 @@ export default function ProfilePage() {
                         </div>
                         
                         <div>
-                          <div className="text-sm text-gray-400 mb-1">Dealer's Hand</div>
+                          <div className="text-sm text-gray-400 mb-1">Dealer&apos;s Hand</div>
                           <div className="flex flex-wrap gap-2">
                             {match.dealerCards.map((card, i) => (
                               <div key={i} className="bg-white/10 px-2 py-1 rounded text-sm">

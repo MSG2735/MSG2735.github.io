@@ -8,7 +8,8 @@ export const defaultSettings: GameSettings = {
   allowSurrender: true,
   allowDoubleAfterSplit: true,
   minimumBet: 5,
-  maximumBet: 1000
+  maximumBet: 1000,
+  volume: 0.5
 };
 
 // Create a shuffled deck of cards
