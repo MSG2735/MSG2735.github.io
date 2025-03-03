@@ -109,10 +109,10 @@ export default function GameBoard() {
         </div>
         
         {/* Game controls - with fixed height container */}
-        <div className="h-[160px] flex items-center justify-center">
+        <div className="h-[180px] flex items-start justify-center">
           <GameControls />
         </div>
       </div>
     </motion.div>
   );
-} 
+}

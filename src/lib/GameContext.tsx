@@ -213,7 +213,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         } else {
           const blackjackPayout = playerHand.bet * 1.5;
           gamePhase = 'gameOver';
-          message = `Blackjack (+$${blackjackPayout})`;
+          message = `Blackjack! (+$${Math.floor(blackjackPayout)})`;
           gameResult = 'blackjack';
         }
       } else if (dealerHasBlackjack) {
@@ -246,7 +246,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       let newCard: Card;
       let newDeck = [...state.deck];
       [newCard, newDeck] = dealCard(newDeck, true);
-      soundManager?.play('cardDeal');
+      soundManager?.play('cardFlip');
       
       // Add the card to the player's hand
       const updatedCards = [...currentHand.cards, newCard];
@@ -336,6 +336,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const currentHandIndex = state.currentHandIndex;
       const updatedHands = [...state.player.hands];
       
+      // Play the card deal sound when standing
+      soundManager?.play('cardDeal');
+      
       // Mark the current hand as standing
       updatedHands[currentHandIndex] = {
         ...updatedHands[currentHandIndex],
@@ -371,9 +374,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           ...state.player,
           hands: updatedHands,
         },
-        currentHandIndex: gamePhase === 'playerTurn' ? nextHandIndex : currentHandIndex,
         gamePhase,
         message,
+        currentHandIndex: nextHandIndex,
       };
     }
     
@@ -605,33 +608,33 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         
         switch (result) {
           case 'win':
-            soundManager?.play('win');
+            // soundManager?.play('win');
             message = `You win (+$${netWin})`;
             break;
           case 'lose':
-            soundManager?.play('lose');
+            // soundManager?.play('lose');
             message = `You lose (-$${bet})`;
             break;
           case 'push':
-            soundManager?.play('push');
+            // soundManager?.play('push');
             message = 'Push (Bet returned)';
             break;
           case 'blackjack':
-            soundManager?.play('blackjack');
-            message = `Blackjack (+$${netWin})`;
+            // soundManager?.play('blackjack');
+            message = `Blackjack! (+$${netWin})`;
             break;
         }
       } else {
         const totalBet = state.player.hands.reduce((sum, hand) => sum + hand.bet, 0);
         const netWin = totalPayout - totalBet;
         if (netWin > 0) {
-          soundManager?.play('win');
+          // soundManager?.play('win');
           message = `You win (+$${netWin})`;
         } else if (netWin < 0) {
-          soundManager?.play('lose');
+          // soundManager?.play('lose');
           message = `You lose (-$${Math.abs(netWin)})`;
         } else {
-          soundManager?.play('push');
+          // soundManager?.play('push');
           message = 'Push (Bet returned)';
         }
       }
