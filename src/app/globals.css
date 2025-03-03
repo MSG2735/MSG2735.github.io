@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 71, 30;
+  --background-end-rgb: 0, 40, 15;
+  
+  /* Theme variables */
+  --table-color: #0d7a3e;
+  --card-back-color: #7a0d0d;
+  --base-font-size: 1rem;
+  --accent-color: #f59e0b;
+  --text-color: #ffffff;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Theme: Default */
+.theme-default {
+  --background-start-rgb: 0, 71, 30;
+  --background-end-rgb: 0, 40, 15;
+  --accent-color: #f59e0b;
+}
+
+/* Theme: Classic Casino */
+.theme-classic {
+  --background-start-rgb: 139, 0, 0;
+  --background-end-rgb: 80, 0, 0;
+  --accent-color: #ffd700;
+}
+
+/* Theme: Modern Minimalist */
+.theme-modern {
+  --background-start-rgb: 30, 30, 30;
+  --background-end-rgb: 10, 10, 10;
+  --accent-color: #3b82f6;
+}
+
+/* Theme: Neon Vegas */
+.theme-neon {
+  --background-start-rgb: 75, 0, 130;
+  --background-end-rgb: 25, 0, 50;
+  --accent-color: #ec4899;
+}
+
+/* Theme: Dark Mode */
+.theme-dark {
+  --background-start-rgb: 10, 10, 10;
+  --background-end-rgb: 0, 0, 0;
+  --accent-color: #6b7280;
+}
+
+/* Card Styles */
+.cards-classic .card-back {
+  @apply bg-red-700 border-2 border-white;
+}
+
+.cards-minimal .card-back {
+  @apply bg-gray-800 border border-gray-600;
+}
+
+.cards-vintage .card-back {
+  @apply bg-amber-800 border-2 border-amber-600;
+}
+
+.cards-modern .card-back {
+  @apply bg-blue-900 border border-blue-500;
+}
+
+/* Table Colors */
+.table-green {
+  --table-color: #0d7a3e;
+}
+
+.table-blue {
+  --table-color: #0d3c7a;
+}
+
+.table-red {
+  --table-color: #7a0d0d;
+}
+
+.table-purple {
+  --table-color: #4a0d7a;
+}
+
+.table-black {
+  --table-color: #1a1a1a;
+}
+
+/* Font Sizes */
+.text-small {
+  --base-font-size: 0.875rem;
+  font-size: 0.875rem;
+}
+
+.text-medium {
+  --base-font-size: 1rem;
+  font-size: 1rem;
+}
+
+.text-large {
+  --base-font-size: 1.125rem;
+  font-size: 1.125rem;
+}
+
+.text-x-large {
+  --base-font-size: 1.25rem;
+  font-size: 1.25rem;
+}
+
+/* Dark Mode */
+.dark-mode {
+  --foreground-rgb: 255, 255, 255;
+}
+
+.light-mode {
+  --foreground-rgb: 0, 0, 0;
+  --text-color: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-end-rgb))
+    )
+    fixed;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--base-font-size);
+}
+
+@layer components {
+  .card {
+    @apply relative rounded-lg overflow-hidden shadow-lg transition-all duration-300;
+    box-shadow: var(--card-shadow);
+  }
+  
+  .card-back {
+    @apply bg-red-700 border-2 border-white;
+  }
+  
+  .card-front {
+    @apply bg-white text-black;
+  }
+  
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-300 focus:outline-none;
+  }
+  
+  .btn-primary {
+    background-color: var(--accent-color);
+    @apply hover:brightness-110 text-black;
+  }
+  
+  .btn-secondary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white;
+  }
+  
+  .btn-disabled {
+    @apply bg-gray-400 cursor-not-allowed text-gray-700;
+  }
+  
+  .chip {
+    @apply rounded-full border-4 flex items-center justify-center font-bold cursor-pointer transition-transform duration-300 hover:scale-110;
+  }
+}

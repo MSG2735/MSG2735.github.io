@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear LocalStorage</title>
+</head>
+<body>
+    <h1>LocalStorage Cleared</h1>
+    <p>All localStorage items have been cleared.</p>
+    <script>
+        // Clear all localStorage items
+        localStorage.clear();
+        
+        // Display what was cleared
+        document.write('<p>Cleared items:</p><ul>');
+        document.write('<li>blackjack-username</li>');
+        document.write('<li>blackjack-gamestate</li>');
+        document.write('<li>blackjack-balance</li>');
+        document.write('<li>blackjack-stats</li>');
+        document.write('<li>blackjack-history</li>');
+        document.write('<li>blackjack-settings</li>');
+        document.write('</ul>');
+        
+        document.write('<p>LocalStorage is now empty.</p>');
+    </script>
+</body>
+</html> 
