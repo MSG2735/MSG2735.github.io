@@ -34,6 +34,7 @@ export interface GameState {
   gamePhase: 'betting' | 'playerTurn' | 'dealerTurn' | 'evaluating' | 'gameOver';
   message: string;
   gameResult: 'win' | 'lose' | 'push' | 'blackjack' | null;
+  handResults: { result: string; payout: number; index: number }[] | null;
 }
 
 export interface GameStats {

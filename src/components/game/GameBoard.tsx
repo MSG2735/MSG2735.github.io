@@ -14,20 +14,28 @@ export default function GameBoard() {
   const getDividerText = () => {
     if (gamePhase === 'betting') {
       return 'Place Your Bet';
-    } else if (gamePhase === 'gameOver' && gameResult) {
-      // Show result when game is over
-      switch(gameResult) {
-        case 'blackjack':
-          return 'Blackjack!';
-        case 'win':
-          return 'You Win!';
-        case 'lose':
-          return 'Dealer Wins';
-        case 'push':
-          return 'Push - Tie Game';
-        default:
-          return 'Game Over';
+    } else if (gamePhase === 'gameOver') {
+      // For split hands, show the detailed message
+      if (player.hands.length > 1) {
+        return gameState.message;
       }
+      
+      // For single hand, show the standard result
+      if (gameResult) {
+        switch(gameResult) {
+          case 'blackjack':
+            return 'Blackjack!';
+          case 'win':
+            return 'You Win!';
+          case 'lose':
+            return 'Dealer Wins';
+          case 'push':
+            return 'Push - Tie Game';
+          default:
+            return 'Game Over';
+        }
+      }
+      return 'Game Over';
     } else {
       // Default text during gameplay
       return 'Good Luck!';
@@ -71,7 +79,7 @@ export default function GameBoard() {
         {/* Table felt divider */}
         <div className="border-t-4 border-dotted border-yellow-500/30 relative flex justify-center items-center py-1">
           <motion.div 
-            className={`${getDividerColor()} text-black px-6 py-1 rounded-full font-bold text-center shadow-lg mt-1`}
+            className={`${getDividerColor()} text-black px-6 py-1 rounded-full font-bold text-center shadow-lg mt-1 ${player.hands.length > 1 && gamePhase === 'gameOver' ? 'text-xs' : 'text-base'}`}
             key={getDividerText()} // Force animation to restart when text changes
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}

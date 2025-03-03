@@ -41,6 +41,7 @@ const initialGameState: GameState = {
   gamePhase: 'betting',
   message: 'Place your bet to start the game.',
   gameResult: null,
+  handResults: null,
 };
 
 // Initial game statistics
@@ -593,12 +594,27 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         result = handResult;
       } else {
         // Multiple hands evaluation
-        for (const hand of playerHands) {
-          const { payout } = determineWinner(hand, dealerHand, defaultSettings);
+        const handResults: { result: string; payout: number; index: number }[] = [];
+        
+        // Evaluate each hand and store its result
+        playerHands.forEach((hand, index) => {
+          const { result: handResult, payout } = determineWinner(hand, dealerHand, defaultSettings);
+          handResults.push({ result: handResult, payout, index });
           totalPayout += payout;
+        });
+        
+        // For multiple hands, we set the overall result based on net payout
+        const totalBet = playerHands.reduce((sum, hand) => sum + hand.bet, 0);
+        if (totalPayout > totalBet) {
+          result = 'win';
+        } else if (totalPayout < totalBet) {
+          result = 'lose';
+        } else {
+          result = 'push';
         }
-        // For multiple hands, we don't set a specific result
-        result = null;
+        
+        // Store the detailed results in the state
+        state.handResults = handResults;
       }
       
       let message = '';
@@ -625,17 +641,39 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             break;
         }
       } else {
+        // For split hands, create a detailed message showing the result of each hand
+        const handResults = state.handResults || [];
+        const handMessages = handResults.map(({ result, index }) => {
+          switch (result) {
+            case 'win':
+              return `Hand ${index + 1}: Win`;
+            case 'lose':
+              return `Hand ${index + 1}: Lose`;
+            case 'push':
+              return `Hand ${index + 1}: Push`;
+            case 'blackjack':
+              return `Hand ${index + 1}: Blackjack!`;
+            default:
+              return `Hand ${index + 1}: ${result}`;
+          }
+        });
+        
+        // Join the hand results with a separator
+        const handResultsText = handMessages.join(' | ');
+        
+        // Add the total net win/loss
         const totalBet = state.player.hands.reduce((sum, hand) => sum + hand.bet, 0);
         const netWin = totalPayout - totalBet;
+        
         if (netWin > 0) {
           // soundManager?.play('playerWins');
-          message = `You win (+$${netWin})`;
+          message = `${handResultsText} | Total: +$${netWin}`;
         } else if (netWin < 0) {
           // soundManager?.play('playerLoses');
-          message = `You lose (-$${Math.abs(netWin)})`;
+          message = `${handResultsText} | Total: -$${Math.abs(netWin)}`;
         } else {
           // soundManager?.play('gameTie');
-          message = 'Push (Bet returned)';
+          message = `${handResultsText} | Total: Push`;
         }
       }
       
@@ -648,6 +686,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         gamePhase: 'gameOver',
         message,
         gameResult: result,
+        handResults: state.handResults,
       };
     }
     
