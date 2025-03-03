@@ -2,10 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
-  // GitHub Pages uses the repository name as the base path
   // For a user site (username.github.io), we don't need a basePath
+  // But we need to ensure all paths are relative
   basePath: '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  // Make sure asset paths are relative for GitHub Pages
+  assetPrefix: './',
   images: {
     unoptimized: true,
   },
