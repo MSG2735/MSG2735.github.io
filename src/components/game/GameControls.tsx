@@ -13,7 +13,7 @@ export default function GameControls() {
   
   // Set the initial bet amount to the last bet amount when entering betting phase
   useEffect(() => {
-    if (gamePhase === 'betting' && lastBetAmount > 0 && lastBetAmount <= player.balance) {
+    if (gamePhase === 'betting') {
       // Get keepBetBetweenRounds setting from localStorage or use default
       let keepBetBetweenRounds = true; // Default value
       
@@ -38,12 +38,18 @@ export default function GameControls() {
         }
       }
       
-      // Only set the bet amount if keepBetBetweenRounds is enabled
-      if (keepBetBetweenRounds) {
+      // Always set bet amount to 0 if keepBetBetweenRounds is false
+      // Only use lastBetAmount if the setting is true and the amount is valid
+      if (!keepBetBetweenRounds) {
+        setBetAmount(0);
+      } else if (lastBetAmount > 0 && lastBetAmount <= player.balance) {
         setBetAmount(lastBetAmount);
+      } else {
+        setBetAmount(0);
       }
     }
   }, [gamePhase, lastBetAmount, player.balance]);
+
   
   // Define available actions based on game phase
   const isBettingPhase = gamePhase === 'betting';
