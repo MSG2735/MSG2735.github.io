@@ -2,25 +2,32 @@ import { Howl } from 'howler';
 
 // Define sound effects with their base volumes
 const sounds = {
-  cardDeal: new Howl({ src: ['/sounds/card-deal.mp3'], volume: 0.1 }),
-  cardFlip: new Howl({ src: ['/sounds/card-flip.mp3'], volume: 0.1 }),
-  chipStack: new Howl({ src: ['/sounds/chip-stack.mp3'], volume: 0.1 }),
-  win: new Howl({ src: ['/sounds/win-casino-new.mp3'], volume: 0.1 }),
-  lose: new Howl({ src: ['/sounds/lose-casino-new.mp3'], volume: 0.1 }),
-  push: new Howl({ src: ['/sounds/push.mp3'], volume: 0.1 }),
-  blackjack: new Howl({ src: ['/sounds/blackjack.mp3'], volume: 0.1 }),
+  // Card sounds
+  cardSlide: new Howl({ src: ['/sounds/card-deal.mp3'], volume: 0.1 }),
+  revealCard: new Howl({ src: ['/sounds/card-flip.mp3'], volume: 0.1 }),
+  
+  // Betting sounds
+  placeBet: new Howl({ src: ['/sounds/chip-stack.mp3'], volume: 0.1 }),
+  
+  // Game outcome sounds
+  playerWins: new Howl({ src: ['/sounds/win-casino-new.mp3'], volume: 0.1 }),
+  playerLoses: new Howl({ src: ['/sounds/lose-casino-new.mp3'], volume: 0.1 }),
+  gameTie: new Howl({ src: ['/sounds/push.mp3'], volume: 0.1 }),
+  playerBlackjack: new Howl({ src: ['/sounds/blackjack.mp3'], volume: 0.1 }),
+  
+  // UI sounds
   volumeChange: new Howl({ src: ['/sounds/volume-change.mp3'], volume: 0.1, preload: true })
 };
 
 // Store the original base volumes for each sound
 const baseVolumes: Record<keyof typeof sounds, number> = {
-  cardDeal: 0.1,
-  cardFlip: 0.1,
-  chipStack: 0.1,
-  win: 0.1,
-  lose: 0.1,
-  push: 0.1,
-  blackjack: 0.1,
+  cardSlide: 0.1,
+  revealCard: 0.1,
+  placeBet: 0.1,
+  playerWins: 0.1,
+  playerLoses: 0.1,
+  gameTie: 0.1,
+  playerBlackjack: 0.1,
   volumeChange: 0.1
 };
 
