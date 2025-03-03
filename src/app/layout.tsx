@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "Deluxe Blackjack",
-  description: "Play blackjack online with realistic casino rules. Built using Next.js, React, Tailwind CSS, and Framer Motion.",
+  description: "Play blackjack online with authentic casino rules. | Built with Next.js, React, Tailwind CSS, and Framer Motion.",
   icons: [
     {
       rel: "icon",
