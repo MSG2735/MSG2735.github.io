@@ -78,6 +78,30 @@ yarn dev
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
+## Deployment
+
+This project is configured to automatically deploy to GitHub Pages when changes are pushed to the main branch.
+
+### Manual Deployment
+
+If you want to deploy manually:
+
+1. Build the project:
+```bash
+npm run build
+```
+
+2. Push the changes to GitHub:
+```bash
+git add .
+git commit -m "Your commit message"
+git push
+```
+
+3. The GitHub Actions workflow will automatically build and deploy your site to GitHub Pages.
+
+4. Your site will be available at: https://msg2735.github.io/MSG2735.github.io/
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
