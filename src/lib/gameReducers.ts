@@ -209,7 +209,13 @@ export function handleStand(state: GameState): GameState {
   let message = state.message;
   let nextHandIndex = currentHandIndex;
   
-  if (areAllHandsComplete(updatedHands)) {
+  // Check if the player busted after doubling down
+  if (updatedHand.isBusted) {
+    // If busted, go straight to evaluating (skip dealer's turn)
+    gamePhase = 'evaluating';
+    message = `Busted after doubling down! (-$${updatedHand.bet})`;
+    soundManager?.play('playerLoses');
+  } else if (areAllHandsComplete(updatedHands)) {
     gamePhase = 'dealerTurn';
     message = 'Dealer\'s turn.';
   } else {
@@ -279,7 +285,13 @@ export function handleDoubleDown(state: GameState): GameState {
   let message = state.message;
   let nextHandIndex = currentHandIndex;
   
-  if (areAllHandsComplete(updatedHands)) {
+  // Check if the player busted after doubling down
+  if (updatedHand.isBusted) {
+    // If busted, go straight to evaluating (skip dealer's turn)
+    gamePhase = 'evaluating';
+    message = `Busted after doubling down! (-$${updatedHand.bet})`;
+    soundManager?.play('playerLoses');
+  } else if (areAllHandsComplete(updatedHands)) {
     gamePhase = 'dealerTurn';
     message = 'Dealer\'s turn.';
   } else {
