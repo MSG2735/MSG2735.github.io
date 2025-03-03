@@ -35,6 +35,7 @@ export interface GameState {
   message: string;
   gameResult: 'win' | 'lose' | 'push' | 'blackjack' | null;
   handResults: { result: string; payout: number; index: number }[] | null;
+  lastBetAmount: number;
 }
 
 export interface GameStats {
@@ -72,6 +73,8 @@ export interface GameSettings {
   minimumBet: number;
   maximumBet: number;
   volume: number; // Default: 0.5
+  autoStandOn21: boolean; // Default: true
+  keepBetBetweenRounds: boolean; // Default: true
 }
 
 export type ActionType = 

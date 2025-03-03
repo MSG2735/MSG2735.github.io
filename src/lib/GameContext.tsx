@@ -42,6 +42,7 @@ const initialGameState: GameState = {
   message: 'Place your bet to start the game.',
   gameResult: null,
   handResults: null,
+  lastBetAmount: 0,
 };
 
 // Initial game statistics
@@ -154,6 +155,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         gamePhase: 'playerTurn',
         message: 'Dealing cards...',
         gameResult: null,
+        lastBetAmount: bet,
       };
     }
     
@@ -296,7 +298,32 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       } else {
         // Check if hand value is 21
         const { total } = calculateHandValue(updatedHand);
-        if (total === 21) {
+        
+        // Get the autoStandOn21 setting from localStorage or use default
+        let autoStandOn21 = true; // Default value
+        
+        if (typeof window !== 'undefined') {
+          // Try to get from direct setting first
+          const autoStandSetting = localStorage.getItem('blackjack-autoStandOn21');
+          if (autoStandSetting !== null) {
+            autoStandOn21 = autoStandSetting !== 'false';
+          } else {
+            // Try to get from settings object
+            const settingsString = localStorage.getItem('blackjack-settings');
+            if (settingsString) {
+              try {
+                const settings = JSON.parse(settingsString);
+                if (settings.autoStandOn21 !== undefined) {
+                  autoStandOn21 = settings.autoStandOn21;
+                }
+              } catch (e) {
+                console.error('Error parsing settings:', e);
+              }
+            }
+          }
+        }
+        
+        if (total === 21 && autoStandOn21) {
           updatedHands[currentHandIndex] = { ...updatedHand, isStanding: true };
           
           // Check if all hands are standing or busted
@@ -313,6 +340,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
               message = `Playing ${nextHandIndex + 1}${getOrdinalSuffix(nextHandIndex + 1)} hand. Hit, stand, or double down.`;
             }
           }
+        } else if (total === 21) {
+          message = 'You have 21! Hit or Stand?';
         } else {
           message = 'Hit or Stand?';
         }
@@ -403,7 +432,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       }
       
       // If this is a split hand, check if doubling after split is allowed
-      if (currentHand.isSplit && !defaultSettings.allowDoubleAfterSplit) {
+      const allowDoubleAfterSplit = typeof window !== 'undefined' && 
+        localStorage.getItem('blackjack-settings') ? 
+        JSON.parse(localStorage.getItem('blackjack-settings') || '{}').allowDoubleAfterSplit : 
+        defaultSettings.allowDoubleAfterSplit;
+        
+      if (currentHand.isSplit && !allowDoubleAfterSplit) {
         return {
           ...state,
           message: 'Doubling down after split is not allowed.',
@@ -578,43 +612,41 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
     
     case 'EVALUATE_HANDS': {
-      // Evaluate each player hand against the dealer
+      // Get the player's hands and dealer's hand
       const playerHands = state.player.hands;
       const dealerHand = state.dealer;
       
-      // Calculate total winnings
+      // Calculate the total payout
       let totalPayout = 0;
-      let result = state.gameResult;
+      let result: GameState['gameResult'] = null;
+      
+      // Store the last bet amount (from the first hand if multiple hands)
+      const lastBetAmount = playerHands[0]?.bet || 0;
+      
+      // For a single hand, we can determine a specific result
+      const handResults: { result: string; payout: number; index: number }[] = [];
+      
+      // Get game settings from localStorage or use defaults
+      const gameSettings = typeof window !== 'undefined' && 
+        localStorage.getItem('blackjack-settings') ? 
+        JSON.parse(localStorage.getItem('blackjack-settings') || '{}') : 
+        defaultSettings;
       
       // Evaluate each hand
       if (playerHands.length === 1) {
         // Single hand evaluation
-        const { result: handResult, payout } = determineWinner(playerHands[0], dealerHand, defaultSettings);
+        const { result: handResult, payout } = determineWinner(playerHands[0], dealerHand, gameSettings);
         totalPayout = payout;
         result = handResult;
       } else {
         // Multiple hands evaluation
-        const handResults: { result: string; payout: number; index: number }[] = [];
         
         // Evaluate each hand and store its result
         playerHands.forEach((hand, index) => {
-          const { result: handResult, payout } = determineWinner(hand, dealerHand, defaultSettings);
+          const { result: handResult, payout } = determineWinner(hand, dealerHand, gameSettings);
           handResults.push({ result: handResult, payout, index });
           totalPayout += payout;
         });
-        
-        // For multiple hands, we set the overall result based on net payout
-        const totalBet = playerHands.reduce((sum, hand) => sum + hand.bet, 0);
-        if (totalPayout > totalBet) {
-          result = 'win';
-        } else if (totalPayout < totalBet) {
-          result = 'lose';
-        } else {
-          result = 'push';
-        }
-        
-        // Store the detailed results in the state
-        state.handResults = handResults;
       }
       
       let message = '';
@@ -642,8 +674,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         }
       } else {
         // For split hands, create a detailed message showing the result of each hand
-        const handResults = state.handResults || [];
-        const handMessages = handResults.map(({ result, index }) => {
+        const handResultsText = handResults.map(({ result, index }) => {
           switch (result) {
             case 'win':
               return `Hand ${index + 1}: Win`;
@@ -656,10 +687,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             default:
               return `Hand ${index + 1}: ${result}`;
           }
-        });
-        
-        // Join the hand results with a separator
-        const handResultsText = handMessages.join(' | ');
+        }).join(' | ');
         
         // Add the total net win/loss
         const totalBet = state.player.hands.reduce((sum, hand) => sum + hand.bet, 0);
@@ -686,17 +714,43 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         gamePhase: 'gameOver',
         message,
         gameResult: result,
-        handResults: state.handResults,
+        handResults: handResults,
+        lastBetAmount: lastBetAmount,
       };
     }
     
     case 'NEW_GAME': {
+      // Get keepBetBetweenRounds setting from localStorage or use default
+      let keepBetBetweenRounds = true; // Default value
+      
+      if (typeof window !== 'undefined') {
+        // Try to get from direct setting first
+        const keepBetSetting = localStorage.getItem('blackjack-keepBetBetweenRounds');
+        if (keepBetSetting !== null) {
+          keepBetBetweenRounds = keepBetSetting !== 'false';
+        } else {
+          // Try to get from settings object
+          const settingsString = localStorage.getItem('blackjack-settings');
+          if (settingsString) {
+            try {
+              const settings = JSON.parse(settingsString);
+              if (settings.keepBetBetweenRounds !== undefined) {
+                keepBetBetweenRounds = settings.keepBetBetweenRounds;
+              }
+            } catch (e) {
+              console.error('Error parsing settings:', e);
+            }
+          }
+        }
+      }
+      
       return {
         ...initialGameState,
         player: {
           ...initialGameState.player,
           balance: state.player.balance,
         },
+        lastBetAmount: keepBetBetweenRounds ? state.lastBetAmount : 0,
       };
     }
     
@@ -764,13 +818,21 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
     case 'EVALUATE_HANDS': {
       if (!action.gameState) return state;
       
-      const { gameResult, player, dealer } = action.gameState;
-      let { wins, losses, pushes, blackjacks, profit } = state;
+      const { player, dealer, gameResult } = action.gameState;
+      
+      // Extract current stats
+      let { wins, losses, pushes, blackjacks, winRate, profit } = state;
+      
+      // Get game settings from localStorage or use defaults
+      const gameSettings = typeof window !== 'undefined' && 
+        localStorage.getItem('blackjack-settings') ? 
+        JSON.parse(localStorage.getItem('blackjack-settings') || '{}') : 
+        defaultSettings;
       
       // For split hands, evaluate each hand individually
       if (player.hands.length > 1) {
         player.hands.forEach(hand => {
-          const { result, payout } = determineWinner(hand, dealer, defaultSettings);
+          const { result, payout } = determineWinner(hand, dealer, gameSettings);
           const handProfit = payout - hand.bet;
           
           if (result === 'win') {
@@ -792,18 +854,18 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
         if (!gameResult) return state;
         
         const currentHand = player.hands[0];
-        const { payout } = determineWinner(currentHand, dealer, defaultSettings);
+        const { result: handResult, payout } = determineWinner(currentHand, dealer, gameSettings);
         const handProfit = payout - currentHand.bet;
         
-        if (gameResult === 'win') {
+        if (handResult === 'win') {
           wins++;
           profit += handProfit;
-        } else if (gameResult === 'lose') {
+        } else if (handResult === 'lose') {
           losses++;
           profit += handProfit;
-        } else if (gameResult === 'push') {
+        } else if (handResult === 'push') {
           pushes++;
-        } else if (gameResult === 'blackjack') {
+        } else if (handResult === 'blackjack') {
           wins++;
           blackjacks++;
           profit += handProfit;
@@ -812,7 +874,7 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
       
       // Calculate win rate
       const totalGames = wins + losses + pushes;
-      const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
+      winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
       
       return {
         wins,
@@ -974,7 +1036,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
       try {
         const savedSettings = localStorage.getItem('blackjack-settings');
         if (savedSettings) {
-          return JSON.parse(savedSettings) as GameSettings;
+          // Parse saved settings
+          const parsedSettings = JSON.parse(savedSettings) as GameSettings;
+          
+          // Ensure all settings exist, using defaults for any missing ones
+          return {
+            ...defaultSettings,
+            ...parsedSettings,
+            // Override with user preferences from localStorage if they exist
+            autoStandOn21: localStorage.getItem('blackjack-autoStandOn21') !== 'false',
+            keepBetBetweenRounds: localStorage.getItem('blackjack-keepBetBetweenRounds') !== 'false'
+          };
         }
       } catch (error) {
         console.error('Error loading settings from localStorage:', error);
@@ -1030,7 +1102,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (gameState.gamePhase === 'gameOver') {
       // Create match history entry for each hand
       gameState.player.hands.forEach((hand, index) => {
-        const { result, payout } = determineWinner(hand, gameState.dealer, settings);
+        const gameSettings = typeof window !== 'undefined' && 
+          localStorage.getItem('blackjack-settings') ? 
+          JSON.parse(localStorage.getItem('blackjack-settings') || '{}') : 
+          defaultSettings;
+          
+        const { result, payout } = determineWinner(hand, gameState.dealer, gameSettings);
         const profit = payout - hand.bet;
         
         const matchEntry: MatchHistoryEntry = {

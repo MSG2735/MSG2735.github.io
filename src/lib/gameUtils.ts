@@ -9,7 +9,9 @@ export const defaultSettings: GameSettings = {
   allowDoubleAfterSplit: true,
   minimumBet: 5,
   maximumBet: 1000,
-  volume: 0.5
+  volume: 0.5,
+  autoStandOn21: true,
+  keepBetBetweenRounds: true
 };
 
 // Create a shuffled deck of cards

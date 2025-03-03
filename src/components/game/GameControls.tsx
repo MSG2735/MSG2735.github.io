@@ -2,14 +2,48 @@
 
 import { useGame } from '@/lib/GameContext';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { canDoubleDown, canSplit, defaultSettings } from '@/lib/gameUtils';
 import Chip from './Chip';
 
 export default function GameControls() {
   const { gameState, dispatch, settings } = useGame();
-  const { gamePhase, player, currentHandIndex } = gameState;
+  const { gamePhase, player, currentHandIndex, lastBetAmount } = gameState;
   const [betAmount, setBetAmount] = useState(0);
+  
+  // Set the initial bet amount to the last bet amount when entering betting phase
+  useEffect(() => {
+    if (gamePhase === 'betting' && lastBetAmount > 0 && lastBetAmount <= player.balance) {
+      // Get keepBetBetweenRounds setting from localStorage or use default
+      let keepBetBetweenRounds = true; // Default value
+      
+      if (typeof window !== 'undefined') {
+        // Try to get from direct setting first
+        const keepBetSetting = localStorage.getItem('blackjack-keepBetBetweenRounds');
+        if (keepBetSetting !== null) {
+          keepBetBetweenRounds = keepBetSetting !== 'false';
+        } else {
+          // Try to get from settings object
+          const settingsString = localStorage.getItem('blackjack-settings');
+          if (settingsString) {
+            try {
+              const settings = JSON.parse(settingsString);
+              if (settings.keepBetBetweenRounds !== undefined) {
+                keepBetBetweenRounds = settings.keepBetBetweenRounds;
+              }
+            } catch (e) {
+              console.error('Error parsing settings:', e);
+            }
+          }
+        }
+      }
+      
+      // Only set the bet amount if keepBetBetweenRounds is enabled
+      if (keepBetBetweenRounds) {
+        setBetAmount(lastBetAmount);
+      }
+    }
+  }, [gamePhase, lastBetAmount, player.balance]);
   
   // Define available actions based on game phase
   const isBettingPhase = gamePhase === 'betting';
@@ -48,7 +82,6 @@ export default function GameControls() {
     if (betAmount > 0 && betAmount <= player.balance) {
       dispatch({ type: 'PLACE_BET', payload: betAmount });
       dispatch({ type: 'DEAL_INITIAL_CARDS' });
-      setBetAmount(0);
     }
   };
   

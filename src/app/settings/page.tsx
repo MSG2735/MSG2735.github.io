@@ -2,6 +2,7 @@
 
 import { useGame } from '@/lib/GameContext';
 import { useTheme } from '@/lib/ThemeContext';
+import { defaultSettings } from '@/lib/gameUtils';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -40,7 +41,9 @@ export default function SettingsPage() {
     username: '',
     displayBalance: true,
     soundEffects: true,
-    animations: true
+    animations: true,
+    autoStandOn21: true,
+    keepBetBetweenRounds: true
   });
   
   // Volume state for real-time updates
@@ -62,7 +65,9 @@ export default function SettingsPage() {
         username: username,
         displayBalance: localStorage.getItem('blackjack-displayBalance') !== 'false',
         soundEffects: localStorage.getItem('blackjack-soundEffects') !== 'false',
-        animations: localStorage.getItem('blackjack-animations') !== 'false'
+        animations: localStorage.getItem('blackjack-animations') !== 'false',
+        autoStandOn21: localStorage.getItem('blackjack-autoStandOn21') !== 'false',
+        keepBetBetweenRounds: localStorage.getItem('blackjack-keepBetBetweenRounds') !== 'false'
       }));
       
       // Initialize volume level from localStorage
@@ -125,6 +130,18 @@ export default function SettingsPage() {
     localStorage.setItem('blackjack-displayBalance', userSettings.displayBalance.toString());
     localStorage.setItem('blackjack-soundEffects', userSettings.soundEffects.toString());
     localStorage.setItem('blackjack-animations', userSettings.animations.toString());
+    localStorage.setItem('blackjack-autoStandOn21', userSettings.autoStandOn21.toString());
+    localStorage.setItem('blackjack-keepBetBetweenRounds', userSettings.keepBetBetweenRounds.toString());
+    
+    // Update game settings
+    const settingsString = localStorage.getItem('blackjack-settings');
+    const gameSettings = settingsString ? JSON.parse(settingsString) : defaultSettings;
+    const updatedSettings = {
+      ...gameSettings,
+      autoStandOn21: userSettings.autoStandOn21,
+      keepBetBetweenRounds: userSettings.keepBetBetweenRounds
+    };
+    localStorage.setItem('blackjack-settings', JSON.stringify(updatedSettings));
     
     setSuccessMessage('Settings saved successfully!');
     setShowSuccess(true);
@@ -478,6 +495,42 @@ export default function SettingsPage() {
                 <label htmlFor="animations" className="ml-3 text-sm font-medium">
                   Enable Animations
                 </label>
+              </div>
+              
+              {/* Auto Stand on 21 */}
+              <div className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="autoStandOn21" 
+                  name="autoStandOn21"
+                  checked={userSettings.autoStandOn21}
+                  onChange={handleUserSettingsChange}
+                  className="w-5 h-5 bg-white/10 border border-white/20 rounded"
+                />
+                <label htmlFor="autoStandOn21" className="ml-3 text-sm font-medium">
+                  Auto Stand on 21
+                </label>
+                <p className="text-sm text-gray-400 ml-4">
+                  Automatically stand when your hand reaches 21
+                </p>
+              </div>
+              
+              {/* Keep Bet Between Rounds */}
+              <div className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="keepBetBetweenRounds" 
+                  name="keepBetBetweenRounds"
+                  checked={userSettings.keepBetBetweenRounds}
+                  onChange={handleUserSettingsChange}
+                  className="w-5 h-5 bg-white/10 border border-white/20 rounded"
+                />
+                <label htmlFor="keepBetBetweenRounds" className="ml-3 text-sm font-medium">
+                  Keep Bet Between Rounds
+                </label>
+                <p className="text-sm text-gray-400 ml-4">
+                  Remember your last bet amount for the next round
+                </p>
               </div>
             </div>
           </div>
