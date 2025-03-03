@@ -311,7 +311,7 @@ export default function ProfilePage() {
                 <div>
                   <div className="text-sm text-gray-400 mb-1">Total Profit/Loss</div>
                   <div className={`text-3xl font-bold ${profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${profit}
+                    {profit >= 0 ? '+$' + profit : '-$' + Math.abs(profit)}
                   </div>
                 </div>
                 

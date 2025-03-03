@@ -70,6 +70,7 @@ export interface GameSettings {
   allowDoubleAfterSplit: boolean;
   minimumBet: number;
   maximumBet: number;
+  volume: number; // Default: 0.5
 }
 
 export type ActionType = 

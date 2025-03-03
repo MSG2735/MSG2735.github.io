@@ -3,6 +3,7 @@
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { GameState, GameStats, GameSettings, ActionType, Hand, Card, MatchHistoryEntry, PurchaseHistoryEntry } from '@/types/game';
 import { createDeck, dealCard, calculateHandValue, isBlackjack, isBusted, determineWinner, defaultSettings } from './gameUtils';
+import { soundManager } from './soundEffects';
 
 // Initial game state
 const initialGameState: GameState = {
@@ -38,7 +39,7 @@ const initialGameState: GameState = {
   },
   currentHandIndex: 0,
   gamePhase: 'betting',
-  message: 'Place your bet to start the game',
+  message: 'Place your bet to start the game.',
   gameResult: null,
 };
 
@@ -126,6 +127,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
+      soundManager.play('chipStack');
+      
       // Create a new hand with the bet
       const newHand: Hand = {
         cards: [],
@@ -164,9 +167,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       let dealerCard2: Card;
       
       [playerCard1, newDeck] = dealCard(newDeck, true);
+      soundManager.play('cardDeal');
       [dealerCard1, newDeck] = dealCard(newDeck, true);
+      soundManager.play('cardDeal');
       [playerCard2, newDeck] = dealCard(newDeck, true);
+      soundManager.play('cardDeal');
       [dealerCard2, newDeck] = dealCard(newDeck, false);
+      soundManager.play('cardDeal');
       
       // Update player's and dealer's hands
       const playerHand = {
@@ -239,6 +246,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       let newCard: Card;
       let newDeck = [...state.deck];
       [newCard, newDeck] = dealCard(newDeck, true);
+      soundManager.play('cardDeal');
       
       // Add the card to the player's hand
       const updatedCards = [...currentHand.cards, newCard];
@@ -531,9 +539,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     
     case 'DEALER_PLAY': {
       // Flip dealer's second card
-      const dealerCards = state.dealer.cards.map((card, index) => 
-        index === 1 ? { ...card, faceUp: true } : card
-      );
+      const dealerCards = state.dealer.cards.map((card, index) => {
+        if (index === 1) {
+          soundManager.play('cardFlip');
+          return { ...card, faceUp: true };
+        }
+        return card;
+      });
       
       let dealerHand: Hand = {
         ...state.dealer,
@@ -593,15 +605,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         
         switch (result) {
           case 'win':
+            soundManager.play('win');
             message = `You win (+$${netWin})`;
             break;
           case 'lose':
+            soundManager.play('lose');
             message = `You lose (-$${bet})`;
             break;
           case 'push':
+            soundManager.play('push');
             message = 'Push (Bet returned)';
             break;
           case 'blackjack':
+            soundManager.play('blackjack');
             message = `Blackjack (+$${netWin})`;
             break;
         }
@@ -609,10 +625,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         const totalBet = state.player.hands.reduce((sum, hand) => sum + hand.bet, 0);
         const netWin = totalPayout - totalBet;
         if (netWin > 0) {
+          soundManager.play('win');
           message = `You win (+$${netWin})`;
         } else if (netWin < 0) {
+          soundManager.play('lose');
           message = `You lose (-$${Math.abs(netWin)})`;
         } else {
+          soundManager.play('push');
           message = 'Push (Bet returned)';
         }
       }
@@ -703,26 +722,50 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
     case 'EVALUATE_HANDS': {
       if (!action.gameState) return state;
       
-      const { gameResult } = action.gameState;
-      const currentHand = action.gameState.player.hands[action.gameState.currentHandIndex];
-      
-      if (!gameResult) return state;
-      
+      const { gameResult, player, dealer } = action.gameState;
       let { wins, losses, pushes, blackjacks, profit } = state;
       
-      // Update stats based on game result
-      if (gameResult === 'win') {
-        wins++;
-        profit += currentHand.bet;
-      } else if (gameResult === 'lose') {
-        losses++;
-        profit -= currentHand.bet;
-      } else if (gameResult === 'push') {
-        pushes++;
-      } else if (gameResult === 'blackjack') {
-        wins++;
-        blackjacks++;
-        profit += currentHand.bet * 1.5;
+      // For split hands, evaluate each hand individually
+      if (player.hands.length > 1) {
+        player.hands.forEach(hand => {
+          const { result, payout } = determineWinner(hand, dealer, defaultSettings);
+          const handProfit = payout - hand.bet;
+          
+          if (result === 'win') {
+            wins++;
+            profit += handProfit;
+          } else if (result === 'lose') {
+            losses++;
+            profit += handProfit;
+          } else if (result === 'push') {
+            pushes++;
+          } else if (result === 'blackjack') {
+            wins++;
+            blackjacks++;
+            profit += handProfit;
+          }
+        });
+      } else {
+        // Single hand evaluation
+        if (!gameResult) return state;
+        
+        const currentHand = player.hands[0];
+        const { payout } = determineWinner(currentHand, dealer, defaultSettings);
+        const handProfit = payout - currentHand.bet;
+        
+        if (gameResult === 'win') {
+          wins++;
+          profit += handProfit;
+        } else if (gameResult === 'lose') {
+          losses++;
+          profit += handProfit;
+        } else if (gameResult === 'push') {
+          pushes++;
+        } else if (gameResult === 'blackjack') {
+          wins++;
+          blackjacks++;
+          profit += handProfit;
+        }
       }
       
       // Calculate win rate
@@ -942,10 +985,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
   
   // Update stats when game is over
   useEffect(() => {
-    if (gameState.gamePhase === 'gameOver' && gameState.gameResult) {
+    if (gameState.gamePhase === 'gameOver') {
+      // Create match history entry for each hand
+      gameState.player.hands.forEach((hand, index) => {
+        const { result, payout } = determineWinner(hand, gameState.dealer, settings);
+        const profit = payout - hand.bet;
+        
+        const matchEntry: MatchHistoryEntry = {
+          id: `${Date.now()}-${index}`,
+          date: new Date(),
+          result,
+          playerCards: [...hand.cards],
+          dealerCards: [...gameState.dealer.cards],
+          bet: hand.bet,
+          payout,
+          profit,
+        };
+        
+        matchHistoryDispatch({ type: 'ADD_MATCH', payload: matchEntry });
+      });
+      
+      // Update stats only once per game
       statsDispatch({ type: 'EVALUATE_HANDS', gameState });
     }
-  }, [gameState.gamePhase, gameState.gameResult]);
+  }, [gameState.gamePhase]);
   
   // Save game state to localStorage
   useEffect(() => {
@@ -959,28 +1022,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [gameState.player.balance, gameStats, settings, matchHistory, purchaseHistory, initialized]);
-  
-  // Add match to history when game is evaluated
-  useEffect(() => {
-    if (gameState.gamePhase === 'gameOver' && gameState.gameResult) {
-      // Create match history entry
-      const currentHand = gameState.player.hands[gameState.currentHandIndex];
-      
-      const matchEntry: MatchHistoryEntry = {
-        id: Date.now().toString(),
-        date: new Date(),
-        result: gameState.gameResult,
-        playerCards: [...currentHand.cards],
-        dealerCards: [...gameState.dealer.cards],
-        bet: currentHand.bet,
-        payout: calculatePayout(currentHand, gameState.gameResult, settings),
-        profit: calculateProfit(currentHand, gameState.gameResult, settings),
-      };
-      
-      matchHistoryDispatch({ type: 'ADD_MATCH', payload: matchEntry });
-      statsDispatch({ type: 'EVALUATE_HANDS', gameState });
-    }
-  }, [gameState, settings]);
   
   // Handle reset actions
   const handleReset = () => {

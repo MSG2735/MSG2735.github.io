@@ -38,6 +38,13 @@ export default function SettingsPage() {
     animations: true
   });
   
+  // Volume state for real-time updates
+  const [volumeLevel, setVolumeLevel] = useState<number>(
+    typeof window !== 'undefined' 
+      ? parseFloat(localStorage.getItem('blackjack-volume') || '0.5')
+      : 0.5
+  );
+  
   // Check if user is logged in
   useEffect(() => {
     const username = localStorage.getItem('blackjack-username');
@@ -52,6 +59,12 @@ export default function SettingsPage() {
         soundEffects: localStorage.getItem('blackjack-soundEffects') !== 'false',
         animations: localStorage.getItem('blackjack-animations') !== 'false'
       }));
+      
+      // Initialize volume level from localStorage
+      const savedVolume = localStorage.getItem('blackjack-volume');
+      if (savedVolume) {
+        setVolumeLevel(parseFloat(savedVolume));
+      }
     }
     setIsLoading(false);
   }, [router]);
@@ -216,20 +229,6 @@ export default function SettingsPage() {
                   Your display name in the game
                 </p>
               </div>
-              
-              <div className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  id="displayBalance" 
-                  name="displayBalance"
-                  checked={userSettings.displayBalance}
-                  onChange={handleUserSettingsChange}
-                  className="w-5 h-5 bg-white/10 border border-white/20 rounded"
-                />
-                <label htmlFor="displayBalance" className="ml-3 text-sm font-medium">
-                  Display Balance on Game Screen
-                </label>
-              </div>
             </div>
           </div>
           
@@ -319,29 +318,30 @@ export default function SettingsPage() {
                 </select>
               </div>
             </div>
-            
-            <div className="space-y-4 mt-6">
-              {/* Dark Mode */}
-              <div className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  id="darkMode" 
-                  name="darkMode"
-                  checked={darkMode}
-                  onChange={handleDarkModeToggle}
-                  className="w-5 h-5 bg-white/10 border border-white/20 rounded"
-                />
-                <label htmlFor="darkMode" className="ml-3 text-sm font-medium">
-                  Dark Mode
-                </label>
-              </div>
-            </div>
           </div>
           
           {/* Game Experience */}
           <div>
             <h2 className="text-xl font-bold mb-4">Game Experience</h2>
             <div className="space-y-4">
+              {/* Display Balance */}
+              <div className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="displayBalance" 
+                  name="displayBalance"
+                  checked={userSettings.displayBalance}
+                  onChange={handleUserSettingsChange}
+                  className="w-5 h-5 bg-white/10 border border-white/20 rounded"
+                />
+                <label htmlFor="displayBalance" className="ml-3 text-sm font-medium">
+                  Display Balance on Game Screen
+                </label>
+                <p className="text-sm text-gray-400 ml-4">
+                  Show your current balance during gameplay
+                </p>
+              </div>
+              
               {/* Sound Effects */}
               <div className="flex items-center">
                 <input 
@@ -355,6 +355,110 @@ export default function SettingsPage() {
                 <label htmlFor="soundEffects" className="ml-3 text-sm font-medium">
                   Enable Sound Effects
                 </label>
+              </div>
+
+              {/* Volume Slider */}
+              <div className={`flex flex-col mb-6 ${!userSettings.soundEffects ? 'opacity-50' : ''}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="volume" className="text-sm font-medium">
+                    Volume
+                  </label>
+                  <span className="text-sm font-medium bg-gray-800 px-2 py-1 rounded-md">
+                    {Math.round(volumeLevel * 100)}%
+                  </span>
+                </div>
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full h-1 bg-gray-700 rounded-full"></div>
+                  </div>
+                  <input 
+                    type="range" 
+                    id="volume" 
+                    name="volume"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    defaultValue={volumeLevel}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      setVolumeLevel(value);
+                      localStorage.setItem('blackjack-volume', value.toString());
+                      if (window.soundManager) {
+                        window.soundManager.setVolume(value);
+                      }
+                    }}
+                    disabled={!userSettings.soundEffects}
+                    className="w-full h-6 appearance-none bg-transparent cursor-pointer relative z-10"
+                    style={{
+                      WebkitAppearance: 'none',
+                      appearance: 'none'
+                    }}
+                  />
+                </div>
+                <style jsx>{`
+                  input[type=range]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: #f59e0b;
+                    cursor: pointer;
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                    transition: all 0.2s ease;
+                  }
+                  
+                  input[type=range]::-webkit-slider-thumb:hover {
+                    background: #fbbf24;
+                    transform: scale(1.1);
+                    box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+                  }
+                  
+                  input[type=range]::-moz-range-thumb {
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: #f59e0b;
+                    cursor: pointer;
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                    transition: all 0.2s ease;
+                    border: none;
+                  }
+                  
+                  input[type=range]::-moz-range-thumb:hover {
+                    background: #fbbf24;
+                    transform: scale(1.1);
+                    box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+                  }
+                  
+                  input[type=range]::-ms-thumb {
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: #f59e0b;
+                    cursor: pointer;
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                    transition: all 0.2s ease;
+                  }
+                  
+                  input[type=range]::-ms-thumb:hover {
+                    background: #fbbf24;
+                    transform: scale(1.1);
+                    box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+                  }
+                  
+                  input[type=range]:disabled::-webkit-slider-thumb {
+                    background: #6b7280;
+                  }
+                  
+                  input[type=range]:disabled::-moz-range-thumb {
+                    background: #6b7280;
+                  }
+                  
+                  input[type=range]:disabled::-ms-thumb {
+                    background: #6b7280;
+                  }
+                `}</style>
               </div>
               
               {/* Animations */}
