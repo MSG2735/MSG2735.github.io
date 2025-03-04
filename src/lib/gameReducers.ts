@@ -334,6 +334,7 @@ export function handleDoubleDown(state: GameState): GameState {
     gamePhase,
     message,
     currentHandIndex: nextHandIndex,
+    lastBetAmount: bet, // Store the original bet amount, not the doubled amount
   };
 }
 
@@ -452,7 +453,8 @@ export function handleEvaluateHands(state: GameState): GameState {
   let result: GameState['gameResult'] = null;
   
   // Store the last bet amount (from the first hand if multiple hands)
-  const lastBetAmount = playerHands[0]?.bet || 0;
+  // If the hand was doubled down, store the original bet amount
+  const lastBetAmount = playerHands[0]?.doubleDown ? playerHands[0].bet / 2 : playerHands[0]?.bet || 0;
   
   // For a single hand, we can determine a specific result
   const handResults: { result: string; payout: number; index: number }[] = [];
