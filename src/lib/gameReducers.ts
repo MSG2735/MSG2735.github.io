@@ -154,6 +154,7 @@ export function handleHit(state: GameState): GameState {
     if (allHandsBusted) {
       gamePhase = 'evaluating';
       message = `All hands busted (-$${updatedHands.reduce((sum, hand) => sum + hand.bet, 0)})`;
+      soundManager?.play('playerLoses');
     } else if (areAllHandsComplete(updatedHands)) {
       gamePhase = 'dealerTurn';
       message = 'Dealer\'s turn.';
@@ -211,12 +212,15 @@ export function handleStand(state: GameState): GameState {
   
   // Check if the player busted after doubling down
   const currentHand = updatedHands[currentHandIndex];
-  if (currentHand.isBusted) {
-    // If busted, go straight to evaluating (skip dealer's turn)
+  const allHandsBusted = updatedHands.every(hand => hand.isBusted);
+  
+  if (allHandsBusted) {
+    // Only go to evaluating if all hands are busted
     gamePhase = 'evaluating';
-    message = `Busted after doubling down! (-$${currentHand.bet})`;
+    message = `All hands busted (-$${updatedHands.reduce((sum, hand) => sum + hand.bet, 0)})`;
     soundManager?.play('playerLoses');
   } else if (areAllHandsComplete(updatedHands)) {
+    // If at least one hand is not busted, proceed to dealer's turn
     gamePhase = 'dealerTurn';
     message = 'Dealer\'s turn.';
   } else {
@@ -288,10 +292,22 @@ export function handleDoubleDown(state: GameState): GameState {
   
   // Check if the player busted after doubling down
   if (updatedHand.isBusted) {
-    // If busted, go straight to evaluating (skip dealer's turn)
-    gamePhase = 'evaluating';
-    message = `Busted after doubling down! (-$${updatedHand.bet})`;
-    soundManager?.play('playerLoses');
+    const allHandsBusted = updatedHands.every(hand => hand.isBusted);
+    if (allHandsBusted) {
+      // Only go to evaluating if all hands are busted
+      gamePhase = 'evaluating';
+      message = `Busted after doubling down! (-$${updatedHand.bet})`;
+      soundManager?.play('playerLoses');
+    } else if (areAllHandsComplete(updatedHands)) {
+      // If at least one hand is not busted, proceed to dealer's turn
+      gamePhase = 'dealerTurn';
+      message = 'Dealer\'s turn.';
+    } else {
+      // Move to the next hand
+      nextHandIndex = currentHandIndex + 1;
+      gamePhase = 'playerTurn';
+      message = `Playing ${nextHandIndex + 1}${getOrdinalSuffix(nextHandIndex + 1)} hand. Hit, stand, or double down.`;
+    }
   } else if (areAllHandsComplete(updatedHands)) {
     gamePhase = 'dealerTurn';
     message = 'Dealer\'s turn.';
