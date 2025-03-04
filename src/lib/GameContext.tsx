@@ -205,9 +205,10 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
             profit += handProfit;
           } else if (result === 'lose') {
             losses++;
-            profit += handProfit;
+            profit += handProfit; // This will be negative since payout is 0
           } else if (result === 'push') {
             pushes++;
+            // No change to profit for push (player gets bet back)
           } else if (result === 'blackjack') {
             wins++;
             blackjacks++;
@@ -227,9 +228,10 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
           profit += handProfit;
         } else if (handResult === 'lose') {
           losses++;
-          profit += handProfit;
+          profit += handProfit; // This will be negative since payout is 0
         } else if (handResult === 'push') {
           pushes++;
+          // No change to profit for push (player gets bet back)
         } else if (handResult === 'blackjack') {
           wins++;
           blackjacks++;
