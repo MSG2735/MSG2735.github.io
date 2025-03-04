@@ -2,16 +2,18 @@
 
 import { useGame } from '@/lib/GameContext';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const { gameState, gameStats, matchHistory, purchaseHistory, dispatch } = useGame();
   const { player } = gameState;
   const { wins, losses, pushes, blackjacks, winRate, profit } = gameStats;
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [addFundsAmount, setAddFundsAmount] = useState(100);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -20,19 +22,43 @@ export default function ProfilePage() {
   const [username, setUsername] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   
   // Check if user is logged in and set username from localStorage
   useEffect(() => {
     setMounted(true);
     const storedUsername = localStorage.getItem('blackjack-username');
     const storedPlayerId = localStorage.getItem('blackjack-player-id');
+    const storedProfilePicture = localStorage.getItem('blackjack-profile-picture');
     if (!storedUsername) {
       router.push('/login');
     } else {
       setUsername(storedUsername);
       setPlayerId(storedPlayerId);
+      setProfilePicture(storedProfilePicture);
     }
   }, [router]);
+
+  // Handle profile picture change
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfilePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProfilePicture(base64String);
+        localStorage.setItem('blackjack-profile-picture', base64String);
+        setSuccessMessage('Profile picture updated successfully!');
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Handle adding funds
   const handleAddFunds = () => {
@@ -172,22 +198,59 @@ export default function ProfilePage() {
           <div className="col-span-1">
             <div className="bg-black/40 rounded-lg p-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="bg-yellow-500 text-black p-3 rounded-full">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor" 
-                    className="w-8 h-8"
-                  >
-                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                  </svg>
+                <div 
+                  className="relative cursor-pointer group"
+                  onClick={handleProfilePictureClick}
+                >
+                  {profilePicture ? (
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-yellow-500">
+                      <Image 
+                        src={profilePicture}
+                        alt="Profile"
+                        width={56}
+                        height={56}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-500 text-black p-3 rounded-full">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor" 
+                        className="w-8 h-8"
+                      >
+                        <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      strokeWidth={1.5} 
+                      stroke="currentColor" 
+                      className="w-6 h-6 text-white"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                    </svg>
+                  </div>
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleProfilePictureChange}
+                  accept="image/*"
+                  className="hidden"
+                />
                 <div>
                   <h2 className="text-2xl font-bold">{username || 'Player'}</h2>
                   <p className="text-gray-400">Player ID: {playerId || 'N/A'}</p>
                 </div>
               </div>
-              
+
               {/* Balance Display */}
               <div className="bg-black/30 rounded-lg p-4 mb-6">
                 <div className="text-sm text-gray-400 mb-1">Current Balance</div>
