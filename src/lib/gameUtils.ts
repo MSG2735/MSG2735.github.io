@@ -138,9 +138,11 @@ export const determineWinner = (
   
   // Handle blackjack
   if (isBlackjack(playerHand) && !isBlackjack(dealerHand)) {
+    // Blackjack pays 3:2 on original bet only, not on doubled bets
+    const originalBet = playerHand.doubleDown ? playerHand.bet / 2 : playerHand.bet;
     return { 
       result: 'blackjack', 
-      payout: playerHand.bet * (1 + settings.blackjackPayout) 
+      payout: originalBet * (1 + settings.blackjackPayout) 
     };
   }
   
@@ -162,4 +164,4 @@ export const determineWinner = (
   }
   
   return { result: 'push', payout: playerHand.bet };
-}; 
+};
