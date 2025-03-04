@@ -1,0 +1,17 @@
+{
+  "name": "Deluxe Blackjack",
+  "short_name": "Blackjack",
+  "description": "Play blackjack online with authentic casino rules. | Built with Next.js, React, Tailwind CSS, and Framer Motion.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
