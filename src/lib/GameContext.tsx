@@ -202,16 +202,16 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
           
           if (result === 'win') {
             wins++;
-            profit = handProfit;
+            profit += handProfit;
           } else if (result === 'lose') {
             losses++;
-            profit = handProfit;
+            profit += handProfit;
           } else if (result === 'push') {
             pushes++;
           } else if (result === 'blackjack') {
             wins++;
             blackjacks++;
-            profit = handProfit;
+            profit += handProfit;
           }
         });
       } else {
@@ -224,16 +224,16 @@ function statsReducer(state: GameStats, action: StatsAction): GameStats {
         
         if (handResult === 'win') {
           wins++;
-          profit = handProfit;
+          profit += handProfit;
         } else if (handResult === 'lose') {
           losses++;
-          profit = handProfit;
+          profit += handProfit;
         } else if (handResult === 'push') {
           pushes++;
         } else if (handResult === 'blackjack') {
           wins++;
           blackjacks++;
-          profit = handProfit;
+          profit += handProfit;
         }
       }
       

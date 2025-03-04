@@ -104,11 +104,14 @@ export function handleInitialDeal(state: GameState): GameState {
       gamePhase = 'gameOver';
       message = 'Both have blackjack - Push (Bet returned)';
       gameResult = 'push';
+      // For a push, we'll return the original bet in the return statement
     } else {
+      // Blackjack pays 3:2 (1.5 times the bet)
       const blackjackPayout = playerHand.bet * 1.5;
       gamePhase = 'gameOver';
       message = `Blackjack! (+$${Math.floor(blackjackPayout)})`;
       gameResult = 'blackjack';
+      // We'll add the payout in the return statement
     }
   } else if (dealerHand.isBlackjack) {
     gamePhase = 'gameOver';
@@ -118,10 +121,24 @@ export function handleInitialDeal(state: GameState): GameState {
     gamePhase = 'playerTurn';
   }
 
+  let updatedBalance = state.player.balance;
+  if (gameResult === 'push') {
+    // Return the original bet for a push
+    updatedBalance += playerHand.bet;
+  } else if (gameResult === 'blackjack') {
+    // Return original bet plus blackjack payout (3:2)
+    const blackjackPayout = playerHand.bet * 1.5;
+    updatedBalance += playerHand.bet + blackjackPayout;
+  }
+
   return {
     ...state,
     deck: newDeck,
-    player: { ...state.player, hands: [playerHand] },
+    player: { 
+      ...state.player, 
+      hands: [playerHand],
+      balance: updatedBalance
+    },
     dealer: dealerHand,
     gamePhase,
     message,
@@ -537,6 +554,7 @@ export function handleEvaluateHands(state: GameState): GameState {
     ...state,
     player: {
       ...state.player,
+      // Only add the payout, since bets were already deducted when placed
       balance: state.player.balance + totalPayout,
     },
     gamePhase: 'gameOver',
