@@ -18,16 +18,19 @@ export default function ProfilePage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [username, setUsername] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   
   // Check if user is logged in and set username from localStorage
   useEffect(() => {
     setMounted(true);
     const storedUsername = localStorage.getItem('blackjack-username');
+    const storedPlayerId = localStorage.getItem('blackjack-player-id');
     if (!storedUsername) {
       router.push('/login');
     } else {
       setUsername(storedUsername);
+      setPlayerId(storedPlayerId);
     }
   }, [router]);
 
@@ -181,7 +184,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">{username || 'Player'}</h2>
-                  <p className="text-gray-400">Player ID: {player.id}</p>
+                  <p className="text-gray-400">Player ID: {playerId || 'N/A'}</p>
                 </div>
               </div>
               
@@ -423,4 +426,4 @@ export default function ProfilePage() {
       </motion.div>
     </div>
   );
-} 
+}

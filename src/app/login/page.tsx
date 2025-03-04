@@ -31,8 +31,12 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
     
-    // Save username to localStorage
+    // Generate random 4-digit player ID
+    const playerId = Math.floor(1000 + Math.random() * 9000);
+    
+    // Save username and player ID to localStorage
     localStorage.setItem('blackjack-username', username);
+    localStorage.setItem('blackjack-player-id', playerId.toString());
     
     // Simulate loading for better UX
     setTimeout(() => {
@@ -109,4 +113,4 @@ export default function LoginPage() {
       </motion.div>
     </div>
   );
-} 
+}
