@@ -77,7 +77,7 @@ const Hand = ({ hand, isDealer = false, currentHand = false }: HandProps) => {
                 key={`${card.suit}-${card.rank}-${index}`}
                 style={{
                   marginRight: index === cards.length - 1 ? '0' : '-65px',
-                  zIndex: index + 1,
+                  zIndex: isDealer && cards.length === 2 && index === 0 ? 3 : index + 1,
                 }}
               >
                 <Card card={card} index={index} isDealer={isDealer} />
