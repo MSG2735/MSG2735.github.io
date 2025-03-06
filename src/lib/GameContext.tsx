@@ -4,6 +4,7 @@ import { createContext, useContext, useReducer, ReactNode, useEffect, useState, 
 import { GameState, GameStats, GameSettings, ActionType, Hand, Card, MatchHistoryEntry, PurchaseHistoryEntry } from '@/types/game';
 import { createDeck, dealCard, calculateHandValue, isBlackjack, isBusted, determineWinner, defaultSettings } from './gameUtils';
 import { soundManager } from './soundEffects';
+import { authService, gameStateService, gameStatsService, matchHistoryService, purchaseHistoryService, gameSettingsService } from './supabaseService';
 
 // Initial game state
 const initialGameState: GameState = {
@@ -319,12 +320,14 @@ function purchaseHistoryReducer(state: PurchaseHistoryEntry[], action: PurchaseH
 
 // Game provider component
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [gameState, dispatch] = useReducer(gameReducer, getInitialGameState());
-  const [gameStats, statsDispatch] = useReducer(statsReducer, getInitialGameStats());
-  const [matchHistory, matchHistoryDispatch] = useReducer(matchHistoryReducer, getInitialMatchHistory());
-  const [purchaseHistory, purchaseHistoryDispatch] = useReducer(purchaseHistoryReducer, getInitialPurchaseHistory());
-  const [settings, settingsDispatch] = useReducer(settingsReducer, getInitialSettings());
+  const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
+  const [gameStats, statsDispatch] = useReducer(statsReducer, initialGameStats);
+  const [matchHistory, matchHistoryDispatch] = useReducer(matchHistoryReducer, initialMatchHistory);
+  const [purchaseHistory, purchaseHistoryDispatch] = useReducer(purchaseHistoryReducer, initialPurchaseHistory);
+  const [settings, settingsDispatch] = useReducer(settingsReducer, defaultSettings);
   const [initialized, setInitialized] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Create a dispatch function that includes the current settings
   const dispatchWithSettings = useCallback((action: GameAction) => {
@@ -343,113 +346,158 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch(action);
   }, [dispatch]);
   
-  // Helper functions to get initial state from localStorage
-  function getInitialGameState(): GameState {
-    if (typeof window !== 'undefined') {
+  // Load user data from Supabase
+  useEffect(() => {
+    const loadUserData = async () => {
+      setIsLoading(true);
       try {
-        // Try to load the full game state first
-        const savedGameState = localStorage.getItem('blackjack-game-state');
-        if (savedGameState) {
-          const parsedState = JSON.parse(savedGameState) as GameState;
-          
-          // Convert dates in the state if needed
-          return parsedState;
+        // Check if user is authenticated
+        const { user, error } = await authService.getCurrentUser();
+        if (error || !user) {
+          // If not authenticated, check for localStorage data for migration
+          checkForLocalStorageData();
+          setIsLoading(false);
+          return;
         }
-        
-        // Fallback to just loading the balance if full state isn't available
-        const savedBalance = localStorage.getItem('blackjack-balance');
-        if (savedBalance) {
-          const balance = parseInt(savedBalance);
-          return {
-            ...initialGameState,
-            player: {
-              ...initialGameState.player,
-              balance
-            }
-          };
+
+        setUserId(user.id);
+
+        // Load game state
+        const { gameState: loadedGameState } = await gameStateService.loadGameState(user.id);
+        if (loadedGameState) {
+          dispatch({ type: 'RESET_ALL_DATA' }); // Reset first to avoid merge issues
+          // Update player info
+          dispatch({ 
+            type: 'UPDATE_BALANCE', 
+            payload: loadedGameState.player.balance 
+          });
+          // Load the rest of the state
+          // We're not directly setting the state to avoid issues with the reducer
+          if (loadedGameState.gamePhase !== 'betting') {
+            // Restore the game in progress
+            dispatch({ type: 'PLACE_BET', payload: loadedGameState.player.hands[0].bet });
+            dispatch({ type: 'DEAL_INITIAL_CARDS' });
+            // Additional actions based on game phase would go here
+          }
         }
+
+        // Load game stats
+        const { gameStats: loadedStats } = await gameStatsService.getGameStats(user.id);
+        if (loadedStats) {
+          statsDispatch({ type: 'LOAD_STATS', payload: loadedStats });
+        }
+
+        // Load match history
+        const { matchHistory: loadedMatchHistory } = await matchHistoryService.getMatchHistory(user.id);
+        if (loadedMatchHistory) {
+          matchHistoryDispatch({ type: 'LOAD_HISTORY', payload: loadedMatchHistory });
+        }
+
+        // Load purchase history
+        const { purchaseHistory: loadedPurchaseHistory } = await purchaseHistoryService.getPurchaseHistory(user.id);
+        if (loadedPurchaseHistory) {
+          purchaseHistoryDispatch({ type: 'LOAD_PURCHASES', payload: loadedPurchaseHistory });
+        }
+
+        // Load game settings
+        const { gameSettings: loadedSettings } = await gameSettingsService.getGameSettings(user.id);
+        if (loadedSettings) {
+          settingsDispatch({ type: 'UPDATE_SETTINGS', payload: loadedSettings });
+        }
+
+        setInitialized(true);
       } catch (error) {
-        console.error('Error loading game state from localStorage:', error);
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
       }
+    };
+
+    loadUserData();
+  }, []);
+
+  // Function to check for localStorage data for migration
+  const checkForLocalStorageData = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // Check if there's localStorage data to migrate later
+      const hasLocalData = [
+        'blackjack-game-state',
+        'blackjack-stats',
+        'blackjack-history',
+        'blackjack-settings',
+        'blackjack-purchase-history'
+      ].some(key => localStorage.getItem(key));
+
+      if (hasLocalData) {
+        console.log('Local data found for potential migration');
+        // We'll migrate this data when the user logs in
+      }
+    } catch (error) {
+      console.error('Error checking localStorage data:', error);
     }
-    return initialGameState;
-  }
-  
-  function getInitialGameStats(): GameStats {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedStats = localStorage.getItem('blackjack-stats');
-        if (savedStats) {
-          return JSON.parse(savedStats) as GameStats;
+  };
+
+  // Function to migrate localStorage data to Supabase
+  const migrateLocalStorageToSupabase = async (userId: string) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // Migrate game state
+      const localGameState = localStorage.getItem('blackjack-game-state');
+      if (localGameState) {
+        const gameState = JSON.parse(localGameState) as GameState;
+        await gameStateService.saveGameState(userId, gameState);
+      }
+
+      // Migrate stats
+      const localStats = localStorage.getItem('blackjack-stats');
+      if (localStats) {
+        const gameStats = JSON.parse(localStats) as GameStats;
+        await gameStatsService.updateGameStats(userId, gameStats);
+      }
+
+      // Migrate settings
+      const localSettings = localStorage.getItem('blackjack-settings');
+      if (localSettings) {
+        const gameSettings = JSON.parse(localSettings) as GameSettings;
+        await gameSettingsService.updateGameSettings(userId, gameSettings);
+      }
+
+      // Migrate match history
+      const localHistory = localStorage.getItem('blackjack-history');
+      if (localHistory) {
+        const history = JSON.parse(localHistory) as MatchHistoryEntry[];
+        for (const entry of history) {
+          await matchHistoryService.addMatchEntry(userId, entry);
         }
-      } catch (error) {
-        console.error('Error loading stats from localStorage:', error);
       }
-    }
-    return initialGameStats;
-  }
-  
-  function getInitialMatchHistory(): MatchHistoryEntry[] {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedHistory = localStorage.getItem('blackjack-history');
-        if (savedHistory) {
-          const history = JSON.parse(savedHistory) as MatchHistoryEntry[];
-          // Convert string dates back to Date objects
-          return history.map(entry => ({
-            ...entry,
-            date: new Date(entry.date)
-          }));
+
+      // Migrate purchase history
+      const localPurchaseHistory = localStorage.getItem('blackjack-purchase-history');
+      if (localPurchaseHistory) {
+        const purchaseHistory = JSON.parse(localPurchaseHistory) as PurchaseHistoryEntry[];
+        for (const entry of purchaseHistory) {
+          await purchaseHistoryService.addPurchase(userId, entry.amount);
         }
-      } catch (error) {
-        console.error('Error loading match history from localStorage:', error);
       }
+
+      // Clear localStorage after migration
+      localStorage.removeItem('blackjack-game-state');
+      localStorage.removeItem('blackjack-stats');
+      localStorage.removeItem('blackjack-settings');
+      localStorage.removeItem('blackjack-history');
+      localStorage.removeItem('blackjack-purchase-history');
+      localStorage.removeItem('blackjack-username');
+      localStorage.removeItem('blackjack-player-id');
+      localStorage.removeItem('blackjack-balance');
+
+      console.log('Migration from localStorage to Supabase complete');
+    } catch (error) {
+      console.error('Error migrating localStorage data to Supabase:', error);
     }
-    return initialMatchHistory;
-  }
-  
-  function getInitialSettings(): GameSettings {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedSettings = localStorage.getItem('blackjack-settings');
-        if (savedSettings) {
-          // Parse saved settings
-          const parsedSettings = JSON.parse(savedSettings) as GameSettings;
-          
-          // Ensure all settings exist, using defaults for any missing ones
-          return {
-            ...defaultSettings,
-            ...parsedSettings,
-            // Override with user preferences from localStorage if they exist
-            autoStandOn21: localStorage.getItem('blackjack-autoStandOn21') !== 'false',
-            keepBetBetweenRounds: localStorage.getItem('blackjack-keepBetBetweenRounds') !== 'false'
-          };
-        }
-      } catch (error) {
-        console.error('Error loading settings from localStorage:', error);
-      }
-    }
-    return defaultSettings;
-  }
-  
-  function getInitialPurchaseHistory(): PurchaseHistoryEntry[] {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedHistory = localStorage.getItem('blackjack-purchase-history');
-        if (savedHistory) {
-          const history = JSON.parse(savedHistory) as PurchaseHistoryEntry[];
-          // Convert string dates back to Date objects
-          return history.map(entry => ({
-            ...entry,
-            date: new Date(entry.date)
-          }));
-        }
-      } catch (error) {
-        console.error('Error loading purchase history from localStorage:', error);
-      }
-    }
-    return initialPurchaseHistory;
-  }
+  };
   
   // Mark as initialized after first render
   useEffect(() => {
@@ -506,21 +554,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [gameState.gamePhase]);
   
-  // Save game state to localStorage
+  // Save game state to Supabase
   useEffect(() => {
-    if (initialized) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('blackjack-game-state', JSON.stringify(gameState));
-        localStorage.setItem('blackjack-stats', JSON.stringify(gameStats));
-        localStorage.setItem('blackjack-settings', JSON.stringify(settings));
-        localStorage.setItem('blackjack-history', JSON.stringify(matchHistory));
-        localStorage.setItem('blackjack-purchase-history', JSON.stringify(purchaseHistory));
+    const saveData = async () => {
+      if (initialized && userId) {
+        try {
+          // Save game state
+          await gameStateService.saveGameState(userId, gameState);
+          
+          // Save game stats
+          await gameStatsService.updateGameStats(userId, gameStats);
+          
+          // Save game settings
+          await gameSettingsService.updateGameSettings(userId, settings);
+          
+          // Match history and purchase history are saved individually when they occur
+        } catch (error) {
+          console.error('Error saving data to Supabase:', error);
+        }
       }
-    }
-  }, [gameState, gameStats, settings, matchHistory, purchaseHistory, initialized]);
+    };
+    
+    saveData();
+  }, [gameState, gameStats, settings, initialized, userId]);
   
   // Handle reset actions
-  const handleReset = () => {
+  const handleReset = async () => {
     // Reset game state
     dispatch({ type: 'RESET_ALL_DATA' });
     
@@ -528,6 +587,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
     statsDispatch({ type: 'RESET_STATS' });
     matchHistoryDispatch({ type: 'CLEAR_HISTORY' });
     purchaseHistoryDispatch({ type: 'CLEAR_PURCHASES' });
+    
+    // If user is logged in, reset data in Supabase too
+    if (userId) {
+      try {
+        // Reset game stats
+        await gameStatsService.updateGameStats(userId, initialGameStats);
+        
+        // Reset game state
+        await gameStateService.saveGameState(userId, initialGameState);
+        
+        // Reset game settings
+        await gameSettingsService.updateGameSettings(userId, defaultSettings);
+        
+        // Note: We don't clear match history or purchase history in the database
+        // as those are valuable historical records
+      } catch (error) {
+        console.error('Error resetting data in Supabase:', error);
+      }
+    }
   };
   
   // Listen for reset action
