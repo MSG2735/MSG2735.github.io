@@ -85,7 +85,7 @@ CREATE TABLE public.game_settings (
   user_id UUID REFERENCES public.users NOT NULL,
   deck_count INTEGER NOT NULL DEFAULT 6,
   blackjack_payout FLOAT NOT NULL DEFAULT 1.5,
-  dealer_stands_on_soft17 BOOLEAN NOT NULL DEFAULT true,
+  dealer_stands_on INTEGER NOT NULL DEFAULT 17,
   auto_stand_on_21 BOOLEAN NOT NULL DEFAULT true,
   keep_bet_between_rounds BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
